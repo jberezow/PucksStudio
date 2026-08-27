@@ -1,73 +1,169 @@
 # PucksStudio
 
-PucksStudio is a read-only analytics and visualization application built on top of [PucksData](https://github.com/jberezow/PucksData).
-
-It provides a way to explore NHL players, games, teams, seasons, and event data while also validating that the normalized PucksData database produces coherent hockey statistics.
+PucksStudio is a read-only NHL game explorer built on the normalized PostgreSQL
+data produced by [PucksData](https://github.com/jberezow/pucksdata). It combines
+an analytical Python backend with a responsive web interface for inspecting
+games and their underlying play-by-play events.
 
 ## Features
 
-Planned functionality includes:
-
-- player, game, team, and season exploration;
-- scoring and event-level drill-down;
-- shot and goal visualizations;
-- game event timelines;
-- derived statistics built from atomic play-by-play records;
-- consistency checks across related data;
-- representative query performance measurements;
-- tabular export for further analysis.
-
-PucksStudio does not call NHL APIs directly. It uses the PostgreSQL database produced by PucksData as its sole application data source.
-
-## Stack
-
-### Backend
-
-- Python
-- FastAPI
-- Psycopg 3
-- PostgreSQL / Neon
-- Polars
-- Pydantic
-- pytest
-- Ruff
-
-### Frontend
-
-- TypeScript
-- React
-- Next.js
-- Tailwind CSS
-- shadcn/ui
-
-Important analytical queries are kept as explicit PostgreSQL SQL, with Polars used for DataFrame transformations and derived analysis.
+- Browse a monthly game calendar and filter the schedule by team.
+- Move directly between game days without stepping through empty dates.
+- Compare scores, period scoring, shots on goal, hits, penalty minutes, and
+  faceoff wins.
+- Filter the event timeline by goals, penalties, shots, hits, or faceoffs.
+- Expand events to inspect coordinates, player identifiers, strength state,
+  and source event identifiers.
+- Distinguish completed games from unplayed playoff schedule placeholders.
+- Share a selected date, team, and game through URL parameters.
+- Inspect query latency and source row counts in the interface.
 
 ## Architecture
 
 ```text
-PucksData / Neon PostgreSQL
-          |
-          v
-      PostgreSQL
-          |
-          v
-   Polars DataFrames
-          |
-          v
-       FastAPI
-          |
-          v
- Next.js / TypeScript
+PucksData PostgreSQL
+        |
+        v
+Canonical SQL queries
+        |
+        v
+Polars DataFrames
+        |
+        v
+FastAPI
+        |
+        v
+Next.js
 ```
 
-PucksStudio has read-only access to the PucksData database. Database ingestion, schema ownership, migrations, and repairs remain the responsibility of PucksData.
+PostgreSQL handles filtering, joins, and ordered event retrieval. Polars derives
+game summaries from the resulting event frames. FastAPI exposes typed,
+read-only endpoints consumed by the Next.js frontend.
 
-More detail is available in [ARCHITECTURE.md](ARCHITECTURE.md).
+PucksStudio does not call NHL APIs or modify the source database. See
+[ARCHITECTURE.md](ARCHITECTURE.md) for implementation details.
 
-## Status
+## Requirements
 
-Initial development.
+- Python 3.12 or newer
+- [uv](https://docs.astral.sh/uv/)
+- Node.js 22 or newer
+- A PostgreSQL database populated by PucksData
+- A PostgreSQL role with read-only access
+
+## Setup
+
+Clone the repository and configure the backend:
+
+```bash
+git clone https://github.com/jberezow/PucksStudio.git
+cd PucksStudio
+cp .env.example .env
+```
+
+Set `DATABASE_URL` in `.env`, then install the Python dependencies:
+
+```bash
+uv sync --project backend --dev
+```
+
+Configure and install the frontend:
+
+```bash
+cd frontend
+cp .env.example .env.local
+npm ci
+cd ..
+```
+
+## Run locally
+
+Start the API from the repository root:
+
+```bash
+uv run --project backend uvicorn pucksstudio.api.main:app \
+  --reload \
+  --env-file .env
+```
+
+The API is available at `http://localhost:8000`. OpenAPI documentation is
+available at `http://localhost:8000/docs`.
+
+In another terminal, start the frontend:
+
+```bash
+cd frontend
+npm run dev
+```
+
+Open `http://localhost:3000`.
+
+## Configuration
+
+Backend configuration is read from environment variables:
+
+| Variable | Required | Default | Description |
+| --- | --- | --- | --- |
+| `DATABASE_URL` | Yes | — | PostgreSQL connection string for a read-only role |
+| `PUCKSSTUDIO_DB_MIN_SIZE` | No | `1` | Minimum database pool size |
+| `PUCKSSTUDIO_DB_MAX_SIZE` | No | `5` | Maximum database pool size |
+| `PUCKSSTUDIO_CORS_ORIGINS` | No | `["http://localhost:3000"]` | Allowed frontend origins |
+
+The frontend uses `NEXT_PUBLIC_API_URL`, which defaults to
+`http://localhost:8000` in its example environment file.
+
+## API
+
+The game viewer uses these endpoints:
+
+| Endpoint | Description |
+| --- | --- |
+| `GET /api/v1/health` | Process health |
+| `GET /api/v1/ready` | Database readiness |
+| `GET /api/v1/games` | Games and adjacent game dates, optionally filtered by date and team |
+| `GET /api/v1/games/calendar` | Monthly game-day counts, optionally filtered by team |
+| `GET /api/v1/games/teams` | Teams represented in the game archive |
+| `GET /api/v1/games/{game_id}` | Game summary and event sequence |
+
+## Quality checks
+
+Run the backend checks:
+
+```bash
+cd backend
+uv run ruff check .
+uv run ruff format --check .
+uv run pytest
+```
+
+Run the frontend checks:
+
+```bash
+cd frontend
+npm run lint
+npm run typecheck
+npm run build
+```
+
+The same checks run in GitHub Actions for pushes and pull requests targeting
+`prime`.
+
+## Project structure
+
+```text
+backend/
+  pucksstudio/
+    api/          FastAPI application and routes
+    db/           Read-only PostgreSQL connection pool
+    hockey/       Polars-based game transformations
+    queries/      Query execution and canonical SQL
+  tests/
+frontend/
+  src/
+    app/          Next.js application shell and styles
+    components/   Game viewer and schedule controls
+```
 
 ## License
 
-MIT
+PucksStudio is available under the [MIT License](LICENSE).
