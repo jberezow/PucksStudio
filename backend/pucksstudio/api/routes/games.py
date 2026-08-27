@@ -98,7 +98,9 @@ class GameEvent(BaseModel):
     goal_shot_type: str | None
     scorer_id: int | None
     scorer_name: str | None
+    assist1_id: int | None
     assist1_name: str | None
+    assist2_id: int | None
     assist2_name: str | None
     shooter_id: int | None
     shooter_name: str | None

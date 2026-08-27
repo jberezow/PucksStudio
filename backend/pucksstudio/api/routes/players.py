@@ -115,7 +115,7 @@ def _skater_summary(games: list[PlayerGame]) -> SkaterSummary:
         assists=assists,
         points=goals + assists,
         shots=shots,
-        shooting_percentage=round(goals / shots * 100, 1) if shots else None,
+        shooting_percentage=round(goals / shots * 100, 1) if shots > goals else None,
     )
 
 
@@ -128,7 +128,7 @@ def _goalie_summary(games: list[PlayerGame]) -> GoalieSummary:
         saves=saves,
         goals_against=goals_against,
         shots_against=shots_against,
-        save_percentage=round(saves / shots_against, 3) if shots_against else None,
+        save_percentage=round(saves / shots_against, 3) if saves else None,
     )
 
 

@@ -3,14 +3,19 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
+import { AppShell } from "@/components/app-shell";
 import type { PlayerSearchResponse } from "@/components/player-types";
-import { SiteHeader } from "@/components/site-header";
+import { apiUrl } from "@/lib/api";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
-export function PlayerSearch() {
-  const [query, setQuery] = useState("");
-  const [role, setRole] = useState("all");
+export function PlayerSearch({
+  initialQuery = "",
+  initialRole = "all",
+}: {
+  initialQuery?: string;
+  initialRole?: string;
+}) {
+  const [query, setQuery] = useState(initialQuery);
+  const [role, setRole] = useState(initialRole);
   const [data, setData] = useState<PlayerSearchResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,6 +30,13 @@ export function PlayerSearch() {
       setError(null);
 
       try {
+        const pageUrl = new URL(window.location.href);
+        if (query) pageUrl.searchParams.set("q", query);
+        else pageUrl.searchParams.delete("q");
+        if (role !== "all") pageUrl.searchParams.set("role", role);
+        else pageUrl.searchParams.delete("role");
+        window.history.replaceState({}, "", pageUrl);
+
         const parameters = new URLSearchParams({ q: query, role });
         const response = await fetch(`${apiUrl}/api/v1/players?${parameters}`, {
           signal: controller.signal,
@@ -48,9 +60,7 @@ export function PlayerSearch() {
   }, [query, role]);
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-[1500px] px-4 py-5 sm:px-8 sm:py-6">
-      <SiteHeader current="players" />
-
+    <AppShell current="players">
       <section className="player-search-hero">
         <div>
           <p className="eyebrow">Player archive</p>
@@ -99,7 +109,11 @@ export function PlayerSearch() {
         ) : data?.players.length ? (
           <div className="player-result-grid">
             {data.players.map((player) => (
-              <Link className="player-result-card" href={`/players/${player.player_id}`} key={player.player_id}>
+              <Link
+                className="player-result-card"
+                href={`/players/${player.player_id}?from=${encodeURIComponent(query)}&role=${role}`}
+                key={player.player_id}
+              >
                 <span className="player-position">{player.position ?? "—"}</span>
                 <span>
                   <strong>{player.first_name} {player.last_name}</strong>
@@ -116,6 +130,6 @@ export function PlayerSearch() {
           <p className="player-message">No players matched those filters.</p>
         )}
       </section>
-    </main>
+    </AppShell>
   );
 }

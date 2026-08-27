@@ -3,33 +3,22 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { AppShell } from "@/components/app-shell";
+import { PlayerGameLog } from "@/components/player-game-log";
 import { PlayerShotMap } from "@/components/player-shot-map";
-import type { PlayerDetailResponse, PlayerGame } from "@/components/player-types";
-import { SiteHeader } from "@/components/site-header";
+import type { PlayerDetailResponse } from "@/components/player-types";
+import { apiError, apiUrl } from "@/lib/api";
+import { readableDate, seasonLabel } from "@/lib/format";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
-function seasonLabel(season: number) {
-  const value = String(season);
-  return `${value.slice(0, 4)}–${value.slice(6)}`;
-}
-
-function readableDate(value: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(`${value}T00:00:00Z`));
-}
-
-function scoreLine(game: PlayerGame) {
-  if (game.team_score === null || game.opponent_score === null) return "Score unavailable";
-  const result = game.team_score > game.opponent_score ? "W" : game.team_score < game.opponent_score ? "L" : "T";
-  return `${result} ${game.team_score}–${game.opponent_score}`;
-}
-
-export function PlayerProfile({ playerId }: { playerId: string }) {
+export function PlayerProfile({
+  fromQuery,
+  fromRole,
+  playerId,
+}: {
+  fromQuery: string;
+  fromRole: string;
+  playerId: string;
+}) {
   const [data, setData] = useState<PlayerDetailResponse | null>(null);
   const [season, setSeason] = useState<number | null>(null);
   const [gameType, setGameType] = useState(2);
@@ -50,8 +39,7 @@ export function PlayerProfile({ playerId }: { playerId: string }) {
         signal: controller.signal,
       });
       if (!response.ok) {
-        const body = await response.json().catch(() => ({})) as { detail?: string };
-        throw new Error(body.detail ?? "Player could not be loaded");
+        throw new Error(await apiError(response, "Player could not be loaded"));
       }
       const result: PlayerDetailResponse = await response.json();
       if (controller.signal.aborted) return;
@@ -87,6 +75,19 @@ export function PlayerProfile({ playerId }: { playerId: string }) {
 
   const player = data?.player;
   const summary = data?.role === "goalie" ? data.goalie_summary : data?.skater_summary;
+  const directoryParameters = new URLSearchParams();
+  if (fromQuery) directoryParameters.set("q", fromQuery);
+  if (fromRole !== "all") directoryParameters.set("role", fromRole);
+  const directoryHref = `/players${directoryParameters.size ? `?${directoryParameters}` : ""}`;
+  const seasonIndex = data && season !== null ? data.seasons.indexOf(season) : -1;
+  const newerSeason = seasonIndex > 0 ? data?.seasons[seasonIndex - 1] : undefined;
+  const olderSeason =
+    data && seasonIndex >= 0 && seasonIndex < data.seasons.length - 1
+      ? data.seasons[seasonIndex + 1]
+      : undefined;
+  const percentageAvailable = data?.role === "goalie"
+    ? data.goalie_summary?.save_percentage !== null
+    : data?.skater_summary?.shooting_percentage !== null;
   const stats = data?.role === "goalie" && data.goalie_summary
     ? [
         ["Tracked games", data.goalie_summary.games_with_events],
@@ -101,19 +102,17 @@ export function PlayerProfile({ playerId }: { playerId: string }) {
           ["Goals", data.skater_summary.goals],
           ["Assists", data.skater_summary.assists],
           ["Points", data.skater_summary.points],
-          ["Shots", data.skater_summary.shots],
+          [percentageAvailable ? "Shots" : "Tracked shots", data.skater_summary.shots],
           ["Shooting %", data.skater_summary.shooting_percentage?.toFixed(1) ?? "–"],
         ]
       : [];
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-[1500px] px-4 py-5 sm:px-8 sm:py-6">
-      <SiteHeader current="players" />
-
+    <AppShell current="players">
       {error && !data ? (
         <section className="panel player-message profile-error" role="alert">
           <p>{error}</p>
-          <Link href="/players">Return to player search</Link>
+          <Link href={directoryHref}>Return to player search</Link>
         </section>
       ) : loading && !data ? (
         <section className="profile-loading">
@@ -124,7 +123,7 @@ export function PlayerProfile({ playerId }: { playerId: string }) {
         <>
           <section className="player-profile-header">
             <div>
-              <Link className="profile-back" href="/players">← Player directory</Link>
+              <Link className="profile-back" href={directoryHref}>← Player directory</Link>
               <p className="eyebrow">{data.role === "goalie" ? "Goalie profile" : "Skater profile"}</p>
               <h1>{player.first_name} {player.last_name}</h1>
               <p>
@@ -134,15 +133,39 @@ export function PlayerProfile({ playerId }: { playerId: string }) {
               </p>
             </div>
             <div className="profile-selectors">
+              <form action="/players" className="profile-player-search">
+                <label>
+                  <span>Find another player</span>
+                  <input aria-label="Find another player" name="q" placeholder="Player name" />
+                </label>
+              </form>
               <label>
                 <span>Season</span>
-                <select
-                  disabled={loading}
-                  onChange={(event) => void load(Number(event.target.value), gameType)}
-                  value={season ?? data.season}
-                >
-                  {data.seasons.map((value) => <option key={value} value={value}>{seasonLabel(value)}</option>)}
-                </select>
+                <span className="season-stepper">
+                  <button
+                    aria-label="Previous season"
+                    disabled={loading || olderSeason === undefined}
+                    onClick={() => olderSeason && void load(olderSeason, gameType)}
+                    type="button"
+                  >
+                    ←
+                  </button>
+                  <select
+                    disabled={loading}
+                    onChange={(event) => void load(Number(event.target.value), gameType)}
+                    value={season ?? data.season}
+                  >
+                    {data.seasons.map((value) => <option key={value} value={value}>{seasonLabel(value)}</option>)}
+                  </select>
+                  <button
+                    aria-label="Next season"
+                    disabled={loading || newerSeason === undefined}
+                    onClick={() => newerSeason && void load(newerSeason, gameType)}
+                    type="button"
+                  >
+                    →
+                  </button>
+                </span>
               </label>
               <label>
                 <span>Competition</span>
@@ -158,6 +181,8 @@ export function PlayerProfile({ playerId }: { playerId: string }) {
               </label>
             </div>
           </section>
+
+          {error && <div className="error-banner profile-refresh-error" role="alert">{error}</div>}
 
           <section className="profile-stat-grid" aria-busy={loading}>
             {stats.map(([label, value]) => (
@@ -196,44 +221,21 @@ export function PlayerProfile({ playerId }: { playerId: string }) {
                 shooting, or goaltending events. They are traceable to source events, but are not
                 a substitute for lineup, shift, or time-on-ice records.
               </p>
+              {!percentageAvailable && (
+                <p className="coverage-warning">
+                  No tracked non-scoring outcomes are available for this profile. Attempt totals
+                  are shown as tracked records and the derived percentage is suppressed.
+                </p>
+              )}
               <small>{data.row_count} mapped events · {data.query_ms.toFixed(1)} ms aggregate query time</small>
             </div>
           </section>
 
           <PlayerShotMap attempts={data.attempts} role={data.role} />
 
-          <section className="panel player-game-log">
-            <div className="player-section-heading">
-              <div><p className="eyebrow">Event appearances</p><h2>Game log</h2></div>
-              <span>{data.games.length} games</span>
-            </div>
-            <div className="game-log-table" role="table" aria-label="Player game log">
-              <div className={`game-log-row game-log-head ${data.role === "goalie" ? "game-log-goalie" : ""}`} role="row">
-                <span>Date</span><span>Matchup</span><span>Result</span>
-                {data.role === "goalie"
-                  ? <><span>SV</span><span>GA</span><span>SA</span></>
-                  : <><span>G</span><span>A</span><span>PTS</span><span>S</span></>}
-              </div>
-              {data.games.map((game) => (
-                <Link
-                  className={`game-log-row ${data.role === "goalie" ? "game-log-goalie" : ""}`}
-                  href={`/?date=${game.game_date}&game=${game.game_id}`}
-                  key={game.game_id}
-                  role="row"
-                >
-                  <span>{readableDate(game.game_date)}</span>
-                  <strong>{game.team_abbrev ?? "—"} vs {game.opponent_abbrev ?? "—"}</strong>
-                  <span>{scoreLine(game)}</span>
-                  {data.role === "goalie"
-                    ? <><span>{game.saves}</span><span>{game.goals_against}</span><span>{game.shots_against}</span></>
-                    : <><span>{game.goals}</span><span>{game.assists}</span><span>{game.points}</span><span>{game.shots}</span></>}
-                </Link>
-              ))}
-              {data.games.length === 0 && <p className="player-message">No tracked events for this season and competition.</p>}
-            </div>
-          </section>
+          <PlayerGameLog games={data.games} role={data.role} />
         </>
       ) : null}
-    </main>
+    </AppShell>
   );
 }

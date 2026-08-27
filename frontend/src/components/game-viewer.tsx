@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { AppShell } from "@/components/app-shell";
 import type {
   Game,
   GameDetailResponse,
@@ -14,11 +15,11 @@ import type {
 } from "@/components/game-types";
 import { RinkView } from "@/components/rink-view";
 import { SchedulePicker } from "@/components/schedule-picker";
-import { SiteHeader } from "@/components/site-header";
+import { apiError, apiUrl } from "@/lib/api";
+import { readableDate } from "@/lib/format";
 
 type HistoryMode = "none" | "push" | "replace";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const eventFilters = ["all", "goal", "penalty", "shot-on-goal", "hit", "faceoff"];
 
 function score(value: number | null, hasEvents = true) {
@@ -40,25 +41,6 @@ function periodLabel(period: PeriodScore | GameEvent) {
   return period.period_type;
 }
 
-function readableDate(value: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(`${value}T00:00:00Z`));
-}
-
-async function responseError(response: Response, fallback: string) {
-  try {
-    const body = (await response.json()) as { detail?: string };
-    return body.detail ?? fallback;
-  } catch {
-    return fallback;
-  }
-}
-
 function updateUrl(date: string, gameId: number | null, team: string, mode: HistoryMode) {
   if (mode === "none") return;
   const url = new URL(window.location.href);
@@ -74,6 +56,18 @@ function updateUrl(date: string, gameId: number | null, team: string, mode: Hist
 function EventDetails({ event }: { event: GameEvent }) {
   const playerId = event.scorer_id ?? event.shooter_id;
   const playerName = event.scorer_name ?? event.shooter_name;
+  const participants = [
+    {
+      id: playerId,
+      label: event.scorer_id ? "Scorer" : "Shooter",
+      name: playerName,
+    },
+    { id: event.assist1_id, label: "Primary assist", name: event.assist1_name },
+    { id: event.assist2_id, label: "Secondary assist", name: event.assist2_name },
+  ].filter(
+    (participant): participant is { id: number; label: string; name: string } =>
+      participant.id !== null && Boolean(participant.name),
+  );
   const details = [
     ["Source event", String(event.event_id)],
     ["In-game ID", String(event.event_id_in_game)],
@@ -85,8 +79,6 @@ function EventDetails({ event }: { event: GameEvent }) {
       event.x_coord !== null && event.y_coord !== null ? `${event.x_coord}, ${event.y_coord}` : null,
     ],
     ["Shot type", event.goal_shot_type ?? event.shot_type],
-    ["Player", playerName],
-    ["Player ID", playerId?.toString()],
     ["Penalty", event.duration_minutes !== null ? `${event.duration_minutes} minutes` : null],
   ].filter((detail): detail is [string, string] => Boolean(detail[1]));
 
@@ -95,12 +87,16 @@ function EventDetails({ event }: { event: GameEvent }) {
       {details.map(([label, value]) => (
         <div key={label}>
           <dt>{label}</dt>
+          <dd>{value}</dd>
+        </div>
+      ))}
+      {participants.map((participant) => (
+        <div key={participant.label}>
+          <dt>{participant.label}</dt>
           <dd>
-            {label === "Player" && playerId ? (
-              <Link className="event-player-link" href={`/players/${playerId}`}>
-                {value}
-              </Link>
-            ) : value}
+            <Link className="event-player-link" href={`/players/${participant.id}`}>
+              {participant.name}
+            </Link>
           </dd>
         </div>
       ))}
@@ -147,7 +143,7 @@ export function GameViewer() {
           signal: controller.signal,
         });
         if (!response.ok) {
-          throw new Error(await responseError(response, "Games could not be loaded"));
+          throw new Error(await apiError(response, "Games could not be loaded"));
         }
 
         const data: GamesResponse = await response.json();
@@ -206,7 +202,7 @@ export function GameViewer() {
     fetch(`${apiUrl}/api/v1/games/${selectedGame}`, { signal: controller.signal })
       .then(async (response) => {
         if (!response.ok) {
-          throw new Error(await responseError(response, "Game details could not be loaded"));
+          throw new Error(await apiError(response, "Game details could not be loaded"));
         }
         return response.json() as Promise<GameDetailResponse>;
       })
@@ -269,8 +265,7 @@ export function GameViewer() {
   }
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-[1500px] px-4 py-5 sm:px-8 sm:py-6">
-      <SiteHeader current="games" />
+    <AppShell current="games">
 
       <section className="py-6 sm:py-8">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-5 sm:mb-7">
@@ -311,7 +306,7 @@ export function GameViewer() {
         <div className="game-layout">
           <aside className="panel schedule-panel overflow-hidden" aria-label="Games on selected date">
             <div className="panel-heading">
-              <span>{date ? readableDate(date) : "Schedule"}</span>
+              <span>{date ? readableDate(date, true) : "Schedule"}</span>
               <span className="metric">{loadingGames ? "Loading" : `${games.length} games`}</span>
             </div>
             <div className="schedule-list divide-y divide-white/5" aria-busy={loadingGames}>
@@ -592,6 +587,6 @@ export function GameViewer() {
           </section>
         </div>
       </section>
-    </main>
+    </AppShell>
   );
 }

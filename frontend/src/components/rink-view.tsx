@@ -2,8 +2,10 @@
 
 import { useMemo, useState } from "react";
 
+import { FilterSelect } from "@/components/filter-select";
 import type { GameEvent } from "@/components/game-types";
 import { rinkPoint, RinkSurface } from "@/components/rink-surface";
+import { strengthLabel, titleCase } from "@/lib/format";
 
 type RinkViewProps = {
   events: GameEvent[];
@@ -19,21 +21,6 @@ function markerLabel(event: GameEvent) {
   const shotType = event.goal_shot_type || event.shot_type;
   const strength = event.strength?.toUpperCase();
   return `${result} by ${player}${shotType ? `, ${shotType} shot` : ""}${strength ? `, ${strength}` : ""}, period ${event.period} at ${event.time_in_period}`;
-}
-
-function readableShotType(value: string) {
-  return value
-    .replaceAll("-", " ")
-    .replace(/\b\w/g, (character) => character.toUpperCase());
-}
-
-function readableStrength(value: string) {
-  const labels: Record<string, string> = {
-    EV: "EV · Even strength",
-    PP: "PP · Power play",
-    SH: "SH · Shorthanded",
-  };
-  return labels[value] ?? value;
 }
 
 export function RinkView({
@@ -110,48 +97,52 @@ export function RinkView({
           <h3 id="rink-title">Shots and goals</h3>
         </div>
         <div className="rink-filters">
-          <label>
-            <span>Team</span>
-            <select onChange={(event) => setTeam(event.target.value)} value={team}>
+          <FilterSelect
+            label="Team"
+            onChange={(event) => setTeam(event.target.value)}
+            value={team}
+          >
               <option value="all">Both teams</option>
               <option value={awayAbbrev}>{awayAbbrev}</option>
               <option value={homeAbbrev}>{homeAbbrev}</option>
-            </select>
-          </label>
-          <label>
-            <span>Period</span>
-            <select onChange={(event) => setPeriod(event.target.value)} value={period}>
+          </FilterSelect>
+          <FilterSelect
+            label="Period"
+            onChange={(event) => setPeriod(event.target.value)}
+            value={period}
+          >
               <option value="all">All periods</option>
               {periods.map((periodNumber) => (
                 <option key={periodNumber} value={periodNumber}>
                   Period {periodNumber}
                 </option>
               ))}
-            </select>
-          </label>
-          <label>
-            <span>Shot type</span>
-            <select onChange={(event) => setShotType(event.target.value)} value={shotType}>
+          </FilterSelect>
+          <FilterSelect
+            label="Shot type"
+            onChange={(event) => setShotType(event.target.value)}
+            value={shotType}
+          >
               <option value="all">All shot types</option>
               {shotTypes.map((type) => (
                 <option key={type} value={type}>
-                  {readableShotType(type)}
+                  {titleCase(type)}
                 </option>
               ))}
-            </select>
-          </label>
-          <label>
-            <span>Strength</span>
-            <select onChange={(event) => setStrength(event.target.value)} value={strength}>
+          </FilterSelect>
+          <FilterSelect
+            label="Strength"
+            onChange={(event) => setStrength(event.target.value)}
+            value={strength}
+          >
               <option value="all">All strengths</option>
               {strengths.values.map((value) => (
                 <option key={value} value={value}>
-                  {readableStrength(value)}
+                  {strengthLabel(value)}
                 </option>
               ))}
               {strengths.hasUnspecified && <option value="unspecified">Unspecified</option>}
-            </select>
-          </label>
+          </FilterSelect>
         </div>
       </div>
 

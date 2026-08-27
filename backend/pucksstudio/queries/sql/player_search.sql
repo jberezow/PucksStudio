@@ -17,6 +17,8 @@ WHERE (
   )
 ORDER BY
     CASE
+        WHEN %(query)s::TEXT = '' AND p.current_team_abbrev IS NOT NULL THEN 0
+        WHEN %(query)s::TEXT = '' THEN 1
         WHEN LOWER(CONCAT_WS(' ', p.first_name, p.last_name)) = LOWER(%(query)s) THEN 0
         WHEN CONCAT_WS(' ', p.first_name, p.last_name) ILIKE %(query)s || '%%' THEN 1
         ELSE 2

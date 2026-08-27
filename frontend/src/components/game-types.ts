@@ -36,6 +36,10 @@ export type GameEvent = {
   goal_shot_type: string | null;
   scorer_id: number | null;
   scorer_name: string | null;
+  assist1_id: number | null;
+  assist1_name: string | null;
+  assist2_id: number | null;
+  assist2_name: string | null;
   shooter_id: number | null;
   shooter_name: string | null;
   shot_type: string | null;

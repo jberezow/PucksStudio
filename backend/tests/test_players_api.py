@@ -34,6 +34,24 @@ def player_row(position: str = "C") -> dict:
     }
 
 
+def test_incomplete_attempt_types_suppress_shooting_percentage() -> None:
+    game = players_module.PlayerGame(
+        game_id=1,
+        game_date=date(1989, 1, 1),
+        game_type=2,
+        team_abbrev="LAK",
+        opponent_abbrev="EDM",
+        team_score=5,
+        opponent_score=3,
+        goals=2,
+        assists=1,
+        points=3,
+        shots=2,
+    )
+
+    assert players_module._skater_summary([game]).shooting_percentage is None
+
+
 @pytest.mark.asyncio
 async def test_player_search_normalizes_parameters(monkeypatch) -> None:
     captured = {}

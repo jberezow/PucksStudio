@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { apiUrl } from "@/lib/api";
+import { readableDate } from "@/lib/format";
+
 type TeamOption = {
   team_id: number;
   abbreviation: string;
@@ -30,18 +33,7 @@ type SchedulePickerProps = {
   onTeamChange: (team: string) => void;
 };
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const weekdays = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-
-function readableDate(value: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(`${value}T00:00:00Z`));
-}
 
 function monthLabel(value: string) {
   return new Intl.DateTimeFormat("en-US", {
@@ -165,7 +157,7 @@ export function SchedulePicker({
         >
           <span>
             <small>Date</small>
-            <strong>{date ? readableDate(date) : "Choose a date"}</strong>
+            <strong>{date ? readableDate(date, true) : "Choose a date"}</strong>
           </span>
           <span aria-hidden="true">▾</span>
         </button>
@@ -196,8 +188,8 @@ export function SchedulePicker({
                   <button
                     aria-label={
                       calendarDay
-                        ? `${readableDate(fullDate)}, ${calendarDay.game_count} games`
-                        : `${readableDate(fullDate)}, no games`
+                        ? `${readableDate(fullDate, true)}, ${calendarDay.game_count} games`
+                        : `${readableDate(fullDate, true)}, no games`
                     }
                     className={`${selected ? "calendar-day-selected" : ""} ${
                       calendarDay ? "calendar-day-active" : ""

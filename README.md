@@ -23,7 +23,12 @@ games, players, goalies, and their underlying play-by-play events.
   traceable events.
 - Explore normalized skater shot maps and goalie shots-faced maps by outcome,
   shot type, and strength.
-- Follow player game-log entries back to the source game viewer.
+- Switch season maps between normalized and raw NHL coordinates.
+- Follow map markers, game-log entries, scorers, shooters, and assists between
+  player profiles and source games.
+- Preserve player searches and profile season selections in shareable URLs.
+- Suppress derived percentages when historical attempt coverage is
+  insufficient.
 - Inspect query latency and source row counts in the interface.
 
 ## Architecture

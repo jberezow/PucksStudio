@@ -946,6 +946,7 @@ a:focus-visible {
 }
 
 .player-search-input input,
+.profile-player-search input,
 .player-role-filter select,
 .profile-selectors select {
   height: 3rem;
@@ -959,6 +960,11 @@ a:focus-visible {
 .player-search-input input {
   width: min(22rem, 70vw);
   padding: 0 0.9rem;
+}
+
+.profile-player-search input {
+  width: 12rem;
+  padding: 0 0.75rem;
 }
 
 .player-role-filter select,
@@ -1154,12 +1160,64 @@ a:focus-visible {
   line-height: 1.6;
 }
 
+.profile-note .coverage-warning {
+  border-left: 2px solid #d97706;
+  padding-left: 0.75rem;
+  color: #d6a15b;
+}
+
 .profile-note small {
   display: block;
   margin-top: 1rem;
   color: #3f4d61;
   font-family: var(--font-geist-mono);
   font-size: 0.6rem;
+}
+
+.season-stepper {
+  display: flex;
+  align-items: center;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.season-stepper select {
+  min-width: 7.2rem;
+  border-radius: 0;
+}
+
+.season-stepper button {
+  width: 2.2rem;
+  height: 3rem;
+  border: 1px solid rgb(255 255 255 / 10%);
+  background: #0a1524;
+  color: #64748b;
+}
+
+.season-stepper button:first-child {
+  border-right: 0;
+  border-radius: 0.7rem 0 0 0.7rem;
+}
+
+.season-stepper button:last-child {
+  border-left: 0;
+  border-radius: 0 0.7rem 0.7rem 0;
+}
+
+.season-stepper button:not(:disabled):hover {
+  color: #67e8f9;
+}
+
+.season-stepper button:disabled {
+  color: #263446;
+  cursor: default;
+}
+
+.profile-refresh-error {
+  margin-bottom: 1rem;
 }
 
 .player-map-panel,
@@ -1176,12 +1234,9 @@ a:focus-visible {
   padding: 0 1.4rem 1.1rem;
 }
 
-.player-attempt-marker {
-  pointer-events: none;
-}
-
 .player-attempt-stopped {
   color: #0891b2;
+  opacity: 0.42;
 }
 
 .player-attempt-stopped circle {
@@ -1192,6 +1247,12 @@ a:focus-visible {
 
 .player-attempt-scored {
   color: #d97706;
+}
+
+.player-attempt-link:hover .player-attempt-marker,
+.player-attempt-link:focus .player-attempt-marker {
+  filter: drop-shadow(0 0 7px currentColor);
+  opacity: 1;
 }
 
 .player-attempt-scored path {
@@ -1339,8 +1400,18 @@ a.game-log-row:hover {
   .player-role-filter,
   .player-role-filter select,
   .profile-selectors label,
-  .profile-selectors select {
+  .profile-selectors select,
+  .profile-player-search,
+  .profile-player-search input {
     width: 100%;
+  }
+
+  .season-stepper {
+    width: 100%;
+  }
+
+  .season-stepper select {
+    width: calc(100% - 4.4rem);
   }
 
   .player-result-grid {

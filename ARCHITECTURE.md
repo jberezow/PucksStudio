@@ -72,6 +72,10 @@ Goalie profiles expose saves, goals against, shots against, and save
 percentage. Because the source schema does not contain lineups, shifts, or
 time-on-ice, participation is described as games with tracked events rather
 than official games played. Wins and shutouts are not inferred.
+Derived percentages are suppressed when a player profile contains no tracked
+non-scoring outcomes. This conservative player-level check avoids presenting
+goal-only historical records as complete shot or save samples without adding an
+archive-wide scan to every profile request.
 
 Every derived result retains the contributing event records and their source
 identifiers.
