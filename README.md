@@ -1,9 +1,9 @@
 # PucksStudio
 
-PucksStudio is a read-only NHL game explorer built on the normalized PostgreSQL
+PucksStudio is a read-only NHL analytics explorer built on the normalized PostgreSQL
 data produced by [PucksData](https://github.com/jberezow/pucksdata). It combines
 an analytical Python backend with a responsive web interface for inspecting
-games and their underlying play-by-play events.
+games, players, goalies, and their underlying play-by-play events.
 
 ## Features
 
@@ -18,6 +18,12 @@ games and their underlying play-by-play events.
   and source event identifiers.
 - Distinguish completed games from unplayed playoff schedule placeholders.
 - Share a selected date, team, and game through URL parameters.
+- Search the player archive by name and role.
+- Compare season and postseason scoring or goaltending totals derived from
+  traceable events.
+- Explore normalized skater shot maps and goalie shots-faced maps by outcome,
+  shot type, and strength.
+- Follow player game-log entries back to the source game viewer.
 - Inspect query latency and source row counts in the interface.
 
 ## Architecture
@@ -116,7 +122,7 @@ The frontend uses `NEXT_PUBLIC_API_URL`, which defaults to
 
 ## API
 
-The game viewer uses these endpoints:
+The frontend uses these endpoints:
 
 | Endpoint | Description |
 | --- | --- |
@@ -126,6 +132,8 @@ The game viewer uses these endpoints:
 | `GET /api/v1/games/calendar` | Monthly game-day counts, optionally filtered by team |
 | `GET /api/v1/games/teams` | Teams represented in the game archive |
 | `GET /api/v1/games/{game_id}` | Game summary and event sequence |
+| `GET /api/v1/players` | Player search, optionally filtered by skater or goalie |
+| `GET /api/v1/players/{player_id}` | Season-aware player profile, event totals, game log, and shot locations |
 
 ## Quality checks
 
@@ -163,7 +171,7 @@ backend/
 frontend/
   src/
     app/          Next.js application shell and styles
-    components/   Game viewer and schedule controls
+    components/   Game, player, navigation, and rink components
 ```
 
 ## License

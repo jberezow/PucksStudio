@@ -23,7 +23,7 @@ Next.js
 ```
 
 PucksData owns ingestion, normalization, schema migrations, and data repair.
-PucksStudio owns analytical queries, derived game summaries, API
+PucksStudio owns analytical queries, derived game and player summaries, API
 serialization, and visualization. PucksStudio does not call NHL APIs and does
 not contain database write paths or migrations.
 
@@ -66,6 +66,13 @@ Polars derives presentation-ready game data:
 - period scoring;
 - readable event descriptions.
 
+Player and goalie aggregates are calculated from typed goals and shots.
+Skater profiles expose goals, assists, points, shots, and shooting percentage.
+Goalie profiles expose saves, goals against, shots against, and save
+percentage. Because the source schema does not contain lineups, shifts, or
+time-on-ice, participation is described as games with tracked events rather
+than official games played. Wins and shutouts are not inferred.
+
 Every derived result retains the contributing event records and their source
 identifiers.
 
@@ -92,6 +99,11 @@ the full loaded-game history.
 
 The interface supports keyboard focus, reduced-motion preferences, responsive
 schedule navigation, and explicit loading and retry states.
+
+Player profiles use stable routes with season and competition URL parameters.
+Season shot maps normalize attacking direction and reuse the same SVG rink
+surface as the game viewer. Game-log rows link back to the underlying game and
+date.
 
 ## API flow
 
@@ -131,5 +143,9 @@ Backend tests cover:
 - eventless game handling;
 - API response contracts;
 - calendar and team-filter parameters.
+- player search parameters;
+- skater scoring and shooting summaries;
+- goalie save-percentage summaries;
+- player attempt provenance.
 
 Frontend CI runs ESLint, TypeScript checking, and a production Next.js build.

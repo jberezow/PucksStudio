@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -13,6 +14,7 @@ import type {
 } from "@/components/game-types";
 import { RinkView } from "@/components/rink-view";
 import { SchedulePicker } from "@/components/schedule-picker";
+import { SiteHeader } from "@/components/site-header";
 
 type HistoryMode = "none" | "push" | "replace";
 
@@ -70,6 +72,8 @@ function updateUrl(date: string, gameId: number | null, team: string, mode: Hist
 }
 
 function EventDetails({ event }: { event: GameEvent }) {
+  const playerId = event.scorer_id ?? event.shooter_id;
+  const playerName = event.scorer_name ?? event.shooter_name;
   const details = [
     ["Source event", String(event.event_id)],
     ["In-game ID", String(event.event_id_in_game)],
@@ -81,7 +85,8 @@ function EventDetails({ event }: { event: GameEvent }) {
       event.x_coord !== null && event.y_coord !== null ? `${event.x_coord}, ${event.y_coord}` : null,
     ],
     ["Shot type", event.goal_shot_type ?? event.shot_type],
-    ["Player ID", event.scorer_id?.toString() ?? event.shooter_id?.toString()],
+    ["Player", playerName],
+    ["Player ID", playerId?.toString()],
     ["Penalty", event.duration_minutes !== null ? `${event.duration_minutes} minutes` : null],
   ].filter((detail): detail is [string, string] => Boolean(detail[1]));
 
@@ -90,7 +95,13 @@ function EventDetails({ event }: { event: GameEvent }) {
       {details.map(([label, value]) => (
         <div key={label}>
           <dt>{label}</dt>
-          <dd>{value}</dd>
+          <dd>
+            {label === "Player" && playerId ? (
+              <Link className="event-player-link" href={`/players/${playerId}`}>
+                {value}
+              </Link>
+            ) : value}
+          </dd>
         </div>
       ))}
     </div>
@@ -259,18 +270,7 @@ export function GameViewer() {
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-[1500px] px-4 py-5 sm:px-8 sm:py-6">
-      <header className="flex flex-wrap items-end justify-between gap-5 border-b border-white/10 pb-5 sm:pb-6">
-        <div>
-          <p className="eyebrow">PucksData analytics</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-            PucksStudio
-          </h1>
-        </div>
-        <div className="flex items-center gap-2 text-xs text-slate-400">
-          <span className="status-dot" />
-          Read-only event explorer
-        </div>
-      </header>
+      <SiteHeader current="games" />
 
       <section className="py-6 sm:py-8">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-5 sm:mb-7">
