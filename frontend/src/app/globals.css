@@ -620,7 +620,210 @@ input:focus-visible {
   background: #a78bfa;
 }
 
+.rink-panel {
+  border-bottom: 1px solid rgb(255 255 255 / 5%);
+  padding: 1.25rem 1rem 1.1rem;
+}
+
+.rink-heading,
+.rink-footer,
+.rink-legend,
+.rink-filters {
+  display: flex;
+  align-items: center;
+}
+
+.rink-heading {
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.9rem;
+}
+
+.rink-heading h3 {
+  margin-top: 0.15rem;
+  color: #e2e8f0;
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.rink-filters {
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.rink-filters label {
+  display: grid;
+  gap: 0.25rem;
+  color: #64748b;
+  font-size: 0.58rem;
+  font-weight: 650;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.rink-filters select {
+  min-width: 7.5rem;
+  border: 1px solid rgb(148 163 184 / 18%);
+  border-radius: 0.45rem;
+  background: #0b1625;
+  padding: 0.42rem 1.8rem 0.42rem 0.6rem;
+  color: #cbd5e1;
+  font-size: 0.7rem;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.rink-frame {
+  overflow: hidden;
+  border: 1px solid rgb(103 232 249 / 14%);
+  border-radius: 0.7rem;
+  background: #08131f;
+  padding: 0.65rem;
+}
+
+.rink-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.rink-ice {
+  fill: #d8e8eb;
+}
+
+.rink-outline {
+  fill: none;
+  stroke: #8bb7c0;
+  stroke-width: 4;
+}
+
+.rink-line {
+  stroke-width: 4;
+}
+
+.rink-red,
+.rink-goal-line {
+  stroke: #e11d48;
+}
+
+.rink-blue {
+  stroke: #2563eb;
+}
+
+.rink-faceoff-circle {
+  fill: none;
+  stroke: #df3153;
+  stroke-width: 3;
+}
+
+.rink-faceoff-dot,
+.rink-neutral-dot {
+  fill: #df3153;
+}
+
+.rink-crease {
+  fill: #9bd8e8;
+  stroke: #df3153;
+  stroke-width: 2;
+}
+
+.rink-net {
+  fill: none;
+  stroke: #e11d48;
+  stroke-width: 4;
+}
+
+.rink-marker {
+  cursor: pointer;
+  color: #64748b;
+  outline: none;
+  transition: opacity 150ms ease, filter 150ms ease;
+}
+
+.rink-marker-away {
+  color: #0891b2;
+}
+
+.rink-marker-home {
+  color: #d97706;
+}
+
+.rink-marker-shot circle {
+  fill: rgb(255 255 255 / 72%);
+  stroke: currentColor;
+  stroke-width: 4;
+}
+
+.rink-marker-goal path {
+  fill: currentColor;
+  stroke: white;
+  stroke-width: 2;
+}
+
+.rink-marker:hover,
+.rink-marker:focus-visible,
+.rink-marker-selected {
+  filter: drop-shadow(0 0 7px currentColor);
+}
+
+.rink-marker-selected circle,
+.rink-marker-selected path {
+  stroke: #f8fafc;
+  stroke-width: 5;
+}
+
+.rink-footer {
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.75rem;
+  color: #64748b;
+  font-family: var(--font-geist-mono);
+  font-size: 0.62rem;
+}
+
+.rink-legend {
+  flex-wrap: wrap;
+  gap: 0.8rem;
+}
+
+.rink-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.rink-legend i {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: #64748b;
+}
+
+.rink-legend .rink-legend-away {
+  background: #0891b2;
+}
+
+.rink-legend .rink-legend-home {
+  background: #d97706;
+}
+
+.rink-legend .rink-legend-shot {
+  border: 2px solid #94a3b8;
+  background: transparent;
+}
+
+.rink-legend .rink-legend-goal {
+  border-radius: 0;
+  transform: rotate(45deg);
+  background: #94a3b8;
+}
+
 @media (min-width: 640px) {
+  .rink-panel {
+    padding-inline: 1.75rem;
+  }
+
   .event-toggle {
     padding-inline: 1.75rem;
   }
@@ -650,6 +853,25 @@ input:focus-visible {
 }
 
 @media (max-width: 639px) {
+  .rink-heading,
+  .rink-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .rink-filters {
+    width: 100%;
+  }
+
+  .rink-filters label {
+    flex: 1;
+  }
+
+  .rink-filters select {
+    width: 100%;
+    min-width: 0;
+  }
+
   .schedule-controls {
     width: 100%;
     display: grid;

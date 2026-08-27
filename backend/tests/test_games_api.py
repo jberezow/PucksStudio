@@ -150,6 +150,8 @@ async def test_game_detail_route_returns_summary_and_provenance(monkeypatch) -> 
     assert body["summary"]["away"]["goals"] == 1
     assert body["summary"]["away"]["shots_on_goal"] == 1
     assert body["events"][0]["event_id"] == 99
+    assert body["events"][0]["x_coord"] == 78
+    assert body["events"][0]["y_coord"] == 4
     assert body["events"][0]["description"].startswith("Goal: Sidney Crosby")
 
 

@@ -1,25 +1,29 @@
-WITH selected_date AS (
+WITH filter_team AS (
+    SELECT team_id
+    FROM teams
+    WHERE abbrev = %(team)s
+),
+selected_date AS (
     SELECT COALESCE(
         %(game_date)s::DATE,
-        MAX(g.game_date) FILTER (
+        (
+            SELECT g.game_date
+            FROM games AS g
             WHERE g.game_date <= CURRENT_DATE
-            AND EXISTS (
-                SELECT 1
-                FROM events AS e
-                WHERE e.game_id = g.game_id
-            )
-            AND (
-                %(team)s::TEXT IS NULL
-                OR EXISTS (
-                    SELECT 1
-                    FROM teams AS filter_team
-                    WHERE filter_team.abbrev = %(team)s
-                      AND filter_team.team_id IN (g.home_team_id, g.away_team_id)
-                )
-            )
+              AND EXISTS (
+                  SELECT 1
+                  FROM events AS e
+                  WHERE e.game_id = g.game_id
+              )
+              AND (
+                  %(team)s::TEXT IS NULL
+                  OR g.home_team_id = (SELECT team_id FROM filter_team)
+                  OR g.away_team_id = (SELECT team_id FROM filter_team)
+              )
+            ORDER BY g.game_date DESC
+            LIMIT 1
         )
     ) AS game_date
-    FROM games AS g
 )
 SELECT
     g.game_id,
@@ -43,8 +47,8 @@ CROSS JOIN selected_date
 WHERE g.game_date = selected_date.game_date
   AND (
       %(team)s::TEXT IS NULL
-      OR home.abbrev = %(team)s
-      OR away.abbrev = %(team)s
+      OR g.home_team_id = (SELECT team_id FROM filter_team)
+      OR g.away_team_id = (SELECT team_id FROM filter_team)
   )
 GROUP BY g.game_id, home.abbrev, home.full_name, away.abbrev, away.full_name
 ORDER BY g.start_time_utc, g.game_id;

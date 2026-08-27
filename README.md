@@ -12,6 +12,8 @@ games and their underlying play-by-play events.
 - Compare scores, period scoring, shots on goal, hits, penalty minutes, and
   faceoff wins.
 - Filter the event timeline by goals, penalties, shots, hits, or faceoffs.
+- Explore shots and goals on an interactive full-rink view, filtered by team,
+  period, shot type, and strength.
 - Expand events to inspect coordinates, player identifiers, strength state,
   and source event identifiers.
 - Distinguish completed games from unplayed playoff schedule placeholders.

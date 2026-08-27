@@ -83,7 +83,12 @@ The game viewer maintains date, team, and game selection in URL parameters.
 Schedule requests and game-detail requests are independently cancellable so
 rapid navigation cannot display stale responses. Calendar dates distinguish
 played games from schedule-only records, and expandable timeline rows expose
-event provenance without crowding the default view.
+event provenance without crowding the default view. A responsive SVG rink maps
+source coordinates directly onto a full-rink view; selecting a shot or goal
+reveals its corresponding timeline record.
+
+Game-day navigation uses indexed nearest-date lookups rather than aggregating
+the full loaded-game history.
 
 The interface supports keyboard focus, reduced-motion preferences, responsive
 schedule navigation, and explicit loading and retry states.

@@ -3,89 +3,16 @@
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import type {
+  Game,
+  GameDetailResponse,
+  GameEvent,
+  GamesResponse,
+  PeriodScore,
+  PlayoffContext,
+} from "@/components/game-types";
+import { RinkView } from "@/components/rink-view";
 import { SchedulePicker } from "@/components/schedule-picker";
-
-type Game = {
-  game_id: number;
-  game_date: string;
-  game_type: number;
-  game_state: string | null;
-  venue: string | null;
-  home_abbrev: string;
-  home_name: string;
-  home_score: number | null;
-  away_abbrev: string;
-  away_name: string;
-  away_score: number | null;
-  event_count: number;
-  playoff: PlayoffContext | null;
-};
-
-type PlayoffContext = {
-  round: number;
-  series: number;
-  game: number;
-};
-
-type GameEvent = {
-  event_id: number;
-  event_id_in_game: number;
-  period: number;
-  period_type: string;
-  time_in_period: string;
-  event_type: string;
-  owner_abbrev: string | null;
-  description: string;
-  strength: string | null;
-  zone_code: string | null;
-  x_coord: number | null;
-  y_coord: number | null;
-  goal_shot_type: string | null;
-  scorer_id: number | null;
-  shooter_id: number | null;
-  shot_type: string | null;
-  duration_minutes: number | null;
-};
-
-type TeamGameStats = {
-  abbreviation: string;
-  goals: number;
-  shots_on_goal: number;
-  hits: number;
-  penalty_minutes: number;
-  faceoff_wins: number;
-};
-
-type PeriodScore = {
-  period: number;
-  period_type: string;
-  away_goals: number;
-  home_goals: number;
-};
-
-type GamesResponse = {
-  date: string | null;
-  previous_date: string | null;
-  next_date: string | null;
-  games: Game[];
-  query_ms: number;
-  row_count: number;
-};
-
-type GameDetailResponse = {
-  game: Omit<Game, "event_count"> & {
-    season: number;
-    venue_location: string | null;
-  };
-  summary: {
-    away: TeamGameStats;
-    home: TeamGameStats;
-    periods: PeriodScore[];
-  };
-  events: GameEvent[];
-  query_ms: number;
-  row_count: number;
-};
 
 type HistoryMode = "none" | "push" | "replace";
 
@@ -317,6 +244,17 @@ export function GameViewer() {
     const gameId = selectedGame;
     setSelectedGame(null);
     window.setTimeout(() => chooseGame(gameId, "replace"), 0);
+  }
+
+  function selectRinkEvent(eventId: number) {
+    setFilter("all");
+    setExpandedEvent(eventId);
+    window.setTimeout(() => {
+      document.getElementById(`event-${eventId}`)?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 0);
   }
 
   return (
@@ -567,6 +505,16 @@ export function GameViewer() {
                   )}
                 </div>
 
+                {detail.row_count > 0 && (
+                  <RinkView
+                    awayAbbrev={selected.away_abbrev}
+                    events={detail.events}
+                    homeAbbrev={selected.home_abbrev}
+                    onSelectEvent={selectRinkEvent}
+                    selectedEventId={expandedEvent}
+                  />
+                )}
+
                 <div className="border-b border-white/5 px-4 py-3 sm:px-7">
                   <div className="flex gap-2 overflow-x-auto pb-1" role="toolbar" aria-label="Event filters">
                     {eventFilters.map((option) => {
@@ -601,7 +549,10 @@ export function GameViewer() {
                             <span>{event.period_type === "REG" ? "Regulation" : event.period_type}</span>
                           </div>
                         )}
-                        <article className={`event-row ${expanded ? "event-row-expanded" : ""}`}>
+                        <article
+                          className={`event-row ${expanded ? "event-row-expanded" : ""}`}
+                          id={`event-${event.event_id}`}
+                        >
                           <button
                             aria-expanded={expanded}
                             className="event-toggle"
