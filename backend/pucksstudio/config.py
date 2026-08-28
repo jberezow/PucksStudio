@@ -10,8 +10,10 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="PUCKSSTUDIO_", extra="ignore")
 
     database_url: str = Field(validation_alias="DATABASE_URL")
-    db_min_size: int = 1
-    db_max_size: int = 5
+    db_min_size: int = Field(default=1, ge=0)
+    db_max_size: int = Field(default=5, ge=1)
+    db_pool_timeout_seconds: float = Field(default=10, gt=0)
+    db_statement_timeout_ms: int = Field(default=15_000, ge=1_000)
     cors_origins: list[str] = ["http://localhost:3000"]
 
 

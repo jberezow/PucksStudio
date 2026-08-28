@@ -90,10 +90,14 @@ async def test_player_search_normalizes_parameters(monkeypatch) -> None:
 
 @pytest.mark.asyncio
 async def test_skater_profile_derives_totals_and_preserves_attempts(monkeypatch) -> None:
-    async def fetch_dataframe(_database, query_name, _parameters):
+    season_parameters = None
+
+    async def fetch_dataframe(_database, query_name, parameters):
+        nonlocal season_parameters
         if query_name == "player_profile":
             return result(query_name, [player_row()])
         if query_name == "player_seasons":
+            season_parameters = parameters
             return result(query_name, [{"season": 20252026}, {"season": 20242025}])
         if query_name == "player_skater_games":
             return result(
@@ -152,6 +156,7 @@ async def test_skater_profile_derives_totals_and_preserves_attempts(monkeypatch)
         "shooting_percentage": 20.0,
     }
     assert body["attempts"][0]["x_coord"] == 78
+    assert season_parameters == {"player_id": 8471675}
 
 
 @pytest.mark.asyncio

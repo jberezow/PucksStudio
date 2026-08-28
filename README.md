@@ -27,6 +27,7 @@ games, players, goalies, and their underlying play-by-play events.
 - Follow map markers, game-log entries, scorers, shooters, and assists between
   player profiles and source games.
 - Preserve player searches and profile season selections in shareable URLs.
+- Limit player season selectors to seasons with attributable typed events.
 - Suppress derived percentages when historical attempt coverage is
   insufficient.
 - Inspect query latency and source row counts in the interface.
@@ -120,10 +121,36 @@ Backend configuration is read from environment variables:
 | `DATABASE_URL` | Yes | — | PostgreSQL connection string for a read-only role |
 | `PUCKSSTUDIO_DB_MIN_SIZE` | No | `1` | Minimum database pool size |
 | `PUCKSSTUDIO_DB_MAX_SIZE` | No | `5` | Maximum database pool size |
+| `PUCKSSTUDIO_DB_POOL_TIMEOUT_SECONDS` | No | `10` | Maximum wait for a pooled connection |
+| `PUCKSSTUDIO_DB_STATEMENT_TIMEOUT_MS` | No | `15000` | PostgreSQL query timeout in milliseconds |
 | `PUCKSSTUDIO_CORS_ORIGINS` | No | `["http://localhost:3000"]` | Allowed frontend origins |
 
 The frontend uses `NEXT_PUBLIC_API_URL`, which defaults to
 `http://localhost:8000` in its example environment file.
+
+For production, use the direct HTTPS origins of the deployed services. Pass
+`NEXT_PUBLIC_API_URL` while building the frontend because public Next.js
+variables are embedded in the browser bundle. Keep `DATABASE_URL` exclusively
+in the backend runtime environment and use a PostgreSQL role restricted to
+read-only access.
+
+## Containers
+
+The repository includes separate production images for the API and web
+interface. Build them from the repository root:
+
+```bash
+docker build -f backend/Dockerfile -t pucksstudio-api .
+docker build \
+  -f frontend/Dockerfile \
+  --build-arg NEXT_PUBLIC_API_URL=https://api.example.com \
+  -t pucksstudio-web \
+  .
+```
+
+The API listens on port `8000` by default and the web interface on port `3000`.
+Both respect a runtime `PORT` variable. The API container expects its database
+and CORS settings at runtime; credentials are never built into either image.
 
 ## API
 

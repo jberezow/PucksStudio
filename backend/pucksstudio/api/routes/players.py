@@ -158,14 +158,14 @@ async def player_detail(
 ) -> PlayerDetailResponse:
     profile_result, seasons_result = await asyncio.gather(
         fetch_dataframe(database, "player_profile", {"player_id": player_id}),
-        fetch_dataframe(database, "player_seasons", {}),
+        fetch_dataframe(database, "player_seasons", {"player_id": player_id}),
     )
     if profile_result.frame.is_empty():
         raise HTTPException(status_code=404, detail="Player not found")
 
     seasons = [int(value) for value in seasons_result.frame.get_column("season").to_list()]
     if not seasons:
-        raise HTTPException(status_code=404, detail="No loaded seasons found")
+        raise HTTPException(status_code=404, detail="No seasons with tracked events found")
     selected_season = season if season is not None else seasons[0]
     if selected_season not in seasons:
         raise HTTPException(status_code=404, detail="Season not found")

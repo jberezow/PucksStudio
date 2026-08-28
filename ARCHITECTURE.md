@@ -107,7 +107,10 @@ schedule navigation, and explicit loading and retry states.
 Player profiles use stable routes with season and competition URL parameters.
 Season shot maps normalize attacking direction and reuse the same SVG rink
 surface as the game viewer. Game-log rows link back to the underlying game and
-date.
+date. Available seasons are derived from every typed event role attributable to
+the player, including scoring, goaltending, hits, blocks, penalties, and
+faceoffs; they represent seasons with tracked events rather than official roster
+history.
 
 ## API flow
 

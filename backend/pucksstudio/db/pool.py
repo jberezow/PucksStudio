@@ -8,8 +8,15 @@ from psycopg_pool import AsyncConnectionPool
 from pucksstudio.config import Settings
 
 
-async def _configure_read_only(connection: AsyncConnection) -> None:
+async def _configure_connection(
+    connection: AsyncConnection,
+    statement_timeout_ms: int,
+) -> None:
     await connection.execute("SET default_transaction_read_only = on")
+    await connection.execute(
+        "SELECT set_config('statement_timeout', %s, false)",
+        (f"{statement_timeout_ms}ms",),
+    )
 
 
 class Database:
@@ -22,12 +29,16 @@ class Database:
         if self._pool is not None:
             return
 
+        async def configure(connection: AsyncConnection) -> None:
+            await _configure_connection(connection, settings.db_statement_timeout_ms)
+
         pool = AsyncConnectionPool(
             conninfo=settings.database_url,
             min_size=settings.db_min_size,
             max_size=settings.db_max_size,
+            timeout=settings.db_pool_timeout_seconds,
             kwargs={"autocommit": True, "row_factory": dict_row},
-            configure=_configure_read_only,
+            configure=configure,
             open=False,
         )
         await pool.open(wait=True)
