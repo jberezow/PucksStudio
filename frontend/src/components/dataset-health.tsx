@@ -610,7 +610,7 @@ export function DatasetHealth({ initialSeason }: { initialSeason: number | null 
 
           <footer className="health-footer">
             <span>
-              Views: <b>dataset_health</b> · <b>season_health</b> · <b>season_gap_kinds</b>
+              Views: <b>dataset_health</b> · <b>season_health</b>
             </span>
             <span>
               <b>{data.row_count} seasons</b> · <b>{data.query_ms.toFixed(1)} ms</b> query time ·

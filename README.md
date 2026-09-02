@@ -173,8 +173,8 @@ The frontend uses these endpoints:
 | `GET /api/v1/observability/dataset` | Dataset health verdict, sync freshness, and per-season coverage from PucksData's observability views |
 | `GET /api/v1/observability/seasons/{season}/missing-games` | Completed games in a season without events, with their backfill checkpoint state |
 
-The observability endpoints read the `observability` schema created by PucksData
-migration 0010. The read-only role needs `USAGE` on that schema and `SELECT` on
+The observability endpoints require the `observability` schema through PucksData
+migration 0011. The read-only role needs `USAGE` on that schema and `SELECT` on
 its views; otherwise the health page reports the dataset as unavailable.
 
 ## Quality checks

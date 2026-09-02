@@ -7,6 +7,8 @@ SELECT
     completed_games,
     games_with_events,
     missing_event_games,
+    acknowledged_gap_games AS acknowledged_gaps,
+    actionable_gap_games AS actionable_gaps,
     goals_missing_shots,
     backfill_failed,
     backfill_pending,
