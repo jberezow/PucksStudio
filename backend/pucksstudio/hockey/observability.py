@@ -1,10 +1,8 @@
 """Dataset health assessment derived from PucksData's observability views.
 
 The views report completeness (every completed game has events, every goal has
-a shots row). They cannot report freshness, because a failed pipeline run
-leaves ``sync_state`` untouched, and they count gaps the pipeline has already
-acknowledged as permanent. This module layers both judgements on top of the
-raw view rows without a database.
+a shots row) and distinguish acknowledged gaps from ones the pipeline can
+still address. This module combines that contract with a freshness assessment.
 """
 
 from __future__ import annotations

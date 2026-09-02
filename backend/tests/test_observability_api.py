@@ -28,6 +28,8 @@ def dataset_row(**overrides):
         "completed_games": 70339,
         "games_with_events": 70300,
         "missing_event_games": 39,
+        "acknowledged_gaps": 23,
+        "actionable_gaps": 0,
         "goals_missing_shots": 0,
         "backfill_failed": 0,
         "backfill_pending": 0,
@@ -43,6 +45,8 @@ def season_row(season: int, completed: int, with_events: int, **overrides):
         "completed_games": completed,
         "games_with_events": with_events,
         "missing_event_games": completed - with_events,
+        "acknowledged_gaps": 0,
+        "actionable_gaps": completed - with_events,
         "event_coverage_pct": with_events / completed * 100,
         "goals_missing_shots": 0,
         "backfill_done": completed,
@@ -56,9 +60,8 @@ def season_row(season: int, completed: int, with_events: int, **overrides):
 
 SEASONS = [
     season_row(20252026, 1417, 1417, backfill_skipped=19),
-    season_row(19581959, 251, 228),
+    season_row(19581959, 251, 228, acknowledged_gaps=23, actionable_gaps=0),
 ]
-GAPS = [{"season": 19581959, "acknowledged_gaps": 23, "actionable_gaps": 0}]
 
 
 @pytest.fixture(autouse=True)
@@ -77,7 +80,7 @@ def make_app() -> FastAPI:
     return app
 
 
-def install_fetch(monkeypatch, *, dataset=None, seasons=None, gaps=None, missing=None):
+def install_fetch(monkeypatch, *, dataset=None, seasons=None, missing=None):
     calls: list[str] = []
 
     async def fetch_dataframe(_database, query_name, parameters):
@@ -86,8 +89,6 @@ def install_fetch(monkeypatch, *, dataset=None, seasons=None, gaps=None, missing
             return result(query_name, [dataset or dataset_row()], elapsed_ms=1500)
         if query_name == "season_health":
             return result(query_name, seasons if seasons is not None else SEASONS, 1300)
-        if query_name == "season_gap_kinds":
-            return result(query_name, gaps if gaps is not None else GAPS, 400)
         if query_name == "season_missing_games":
             assert parameters == {"season": 19581959}
             return result(query_name, missing or [], 350)
@@ -106,14 +107,14 @@ async def test_dataset_health_merges_views_with_assessment(monkeypatch) -> None:
 
     assert response.status_code == 200
     payload = response.json()
-    assert sorted(calls) == ["dataset_health", "season_gap_kinds", "season_health"]
+    assert sorted(calls) == ["dataset_health", "season_health"]
     assert payload["verdict"] == "known_gaps"
     assert payload["summary"]["healthy"] is False
     assert payload["summary"]["acknowledged_gaps"] == 23
     assert payload["summary"]["actionable_gaps"] == 0
     assert payload["sync_overdue_hours"] == 36
     assert 3500 <= payload["sync_age_seconds"] <= 3700
-    assert payload["query_ms"] == 3200
+    assert payload["query_ms"] == 2800
     assert payload["row_count"] == 2
     assert [reason["code"] for reason in payload["reasons"]] == ["acknowledged_gaps"]
 
@@ -133,7 +134,7 @@ async def test_dataset_health_reuses_cached_snapshot(monkeypatch) -> None:
         second = await client.get("/api/v1/observability/dataset")
 
     assert first.status_code == second.status_code == 200
-    assert len(calls) == 3
+    assert len(calls) == 2
     assert first.json()["fetched_at"] == second.json()["fetched_at"]
 
 
@@ -150,7 +151,7 @@ async def test_missing_views_or_grants_report_unavailable(monkeypatch) -> None:
     assert response.status_code == 503
     detail = response.json()["detail"]
     assert "permission denied for schema observability" in detail
-    assert "migration 0010" in detail
+    assert "migration 0011" in detail
 
 
 @pytest.mark.asyncio

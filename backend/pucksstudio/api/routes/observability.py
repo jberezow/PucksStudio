@@ -130,17 +130,16 @@ def reset_cache() -> None:
 
 async def _fetch_snapshot() -> _HealthSnapshot:
     try:
-        dataset, seasons, gaps = await asyncio.gather(
+        dataset, seasons = await asyncio.gather(
             fetch_dataframe(database, "dataset_health", {}),
             fetch_dataframe(database, "season_health", {}),
-            fetch_dataframe(database, "season_gap_kinds", {}),
         )
     except _UNAVAILABLE_ERRORS as error:
         raise HTTPException(
             status_code=503,
             detail=(
                 "Observability views are unavailable to PucksStudio: "
-                f"{error.diag.message_primary or error}. Apply PucksData migration 0010 "
+                f"{error.diag.message_primary or error}. Apply PucksData migration 0011 "
                 "and grant USAGE on schema observability plus SELECT on its views to "
                 "the read-only role."
             ),
@@ -149,12 +148,13 @@ async def _fetch_snapshot() -> _HealthSnapshot:
     if dataset.frame.is_empty():
         raise HTTPException(status_code=503, detail="observability.dataset_health returned no row")
 
+    season_rows = seasons.frame.to_dicts()
     return _HealthSnapshot(
         fetched_at=datetime.now(UTC),
         summary=dataset.frame.to_dicts()[0],
-        seasons=seasons.frame.to_dicts(),
-        gap_counts=gap_counts_by_season(gaps.frame.to_dicts()),
-        query_ms=_total_ms(dataset, seasons, gaps),
+        seasons=season_rows,
+        gap_counts=gap_counts_by_season(season_rows),
+        query_ms=_total_ms(dataset, seasons),
         row_count=seasons.row_count,
     )
 
@@ -175,25 +175,8 @@ async def _snapshot(cache_seconds: float) -> _HealthSnapshot:
 
 def _build_response(snapshot: _HealthSnapshot, assessment: Assessment) -> DatasetHealthResponse:
     settings = get_settings()
-    seasons = []
-    for row in snapshot.seasons:
-        counts = snapshot.gap_counts.get(int(row["season"]), GapCounts())
-        seasons.append(
-            SeasonHealth.model_validate(
-                {
-                    **row,
-                    "acknowledged_gaps": counts.acknowledged,
-                    "actionable_gaps": counts.actionable,
-                }
-            )
-        )
-    summary = DatasetSummary.model_validate(
-        {
-            **snapshot.summary,
-            "acknowledged_gaps": sum(season.acknowledged_gaps for season in seasons),
-            "actionable_gaps": sum(season.actionable_gaps for season in seasons),
-        }
-    )
+    seasons = [SeasonHealth.model_validate(row) for row in snapshot.seasons]
+    summary = DatasetSummary.model_validate(snapshot.summary)
     return DatasetHealthResponse(
         generated_at=datetime.now(UTC),
         fetched_at=snapshot.fetched_at,
