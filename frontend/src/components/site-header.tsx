@@ -1,10 +1,17 @@
 import Link from "next/link";
 
+export type SiteSection = "games" | "players" | "health";
+export type StatusTone = "ok" | "info" | "warn" | "bad";
+export type SiteStatus = { label: string; tone: StatusTone };
+
 type SiteHeaderProps = {
-  current: "games" | "players";
+  current: SiteSection;
+  status?: SiteStatus;
 };
 
-export function SiteHeader({ current }: SiteHeaderProps) {
+const defaultStatus: SiteStatus = { label: "Read-only explorer", tone: "ok" };
+
+export function SiteHeader({ current, status = defaultStatus }: SiteHeaderProps) {
   return (
     <header className="site-header">
       <Link className="site-brand" href="/">
@@ -18,10 +25,13 @@ export function SiteHeader({ current }: SiteHeaderProps) {
         <Link aria-current={current === "players" ? "page" : undefined} href="/players">
           Players
         </Link>
+        <Link aria-current={current === "health" ? "page" : undefined} href="/health">
+          Health
+        </Link>
       </nav>
       <div className="site-status">
-        <span className="status-dot" />
-        Read-only explorer
+        <span className={`status-dot status-dot-${status.tone}`} />
+        {status.label}
       </div>
     </header>
   );

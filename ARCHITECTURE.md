@@ -85,6 +85,30 @@ IDs. Eventless postseason records are treated as unplayed schedule
 placeholders, while missing state on other records remains visible as
 unavailable source data.
 
+## Dataset health
+
+PucksData publishes two read-only views, `observability.dataset_health` and
+`observability.season_health`, which report completeness: every completed game
+has events and every goal has a shots row. PucksStudio treats them as the
+contract and does not recompute their figures.
+
+Two judgements are layered on top in `hockey/observability.py`, without a
+database, because the views cannot make them:
+
+- Freshness. A failed pipeline run leaves `sync_state` untouched, so the age of
+  the last successful sync is compared with a configurable window. Freshness
+  never keys off game dates, which are legitimately months old in the
+  offseason.
+- Gap classification. PucksData's sync will not retry a game whose backfill
+  checkpoint is `done` or `skipped`. Missing games with such a checkpoint are
+  reported as acknowledged; the rest are actionable. Only actionable gaps,
+  failed or pending backfills, orphaned goals, or events trailing the schedule
+  raise the verdict to "attention".
+
+The three health queries run concurrently and the snapshot is cached briefly
+in process, since each view scans every completed game. A missing schema or
+grant is reported as an unavailable dataset rather than a server fault.
+
 ## Frontend
 
 The frontend uses TypeScript, React, Next.js, and Tailwind CSS. It consumes
@@ -153,6 +177,8 @@ Backend tests cover:
 - player search parameters;
 - skater scoring and shooting summaries;
 - goalie save-percentage summaries;
-- player attempt provenance.
+- player attempt provenance;
+- dataset health verdicts and gap classification;
+- observability API contracts, caching, and the unavailable state.
 
 Frontend CI runs ESLint, TypeScript checking, and a production Next.js build.

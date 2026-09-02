@@ -31,6 +31,8 @@ games, players, goalies, and their underlying play-by-play events.
 - Suppress derived percentages when historical attempt coverage is
   insufficient.
 - Inspect query latency and source row counts in the interface.
+- Check dataset health: event coverage per season, goal-to-shot consistency,
+  sync freshness, and the games still missing play-by-play.
 
 ## Architecture
 
@@ -124,6 +126,8 @@ Backend configuration is read from environment variables:
 | `PUCKSSTUDIO_DB_POOL_TIMEOUT_SECONDS` | No | `10` | Maximum wait for a pooled connection |
 | `PUCKSSTUDIO_DB_STATEMENT_TIMEOUT_MS` | No | `15000` | PostgreSQL query timeout in milliseconds |
 | `PUCKSSTUDIO_CORS_ORIGINS` | No | `["http://localhost:3000"]` | Allowed frontend origins |
+| `PUCKSSTUDIO_SYNC_OVERDUE_HOURS` | No | `36` | Hours since the last successful PucksData sync before the health page reports it overdue |
+| `PUCKSSTUDIO_OBSERVABILITY_CACHE_SECONDS` | No | `60` | How long the dataset health snapshot is reused between requests |
 
 The frontend uses `NEXT_PUBLIC_API_URL`, which defaults to
 `http://localhost:8000` in its example environment file.
@@ -166,6 +170,12 @@ The frontend uses these endpoints:
 | `GET /api/v1/games/{game_id}` | Game summary and event sequence |
 | `GET /api/v1/players` | Player search, optionally filtered by skater or goalie |
 | `GET /api/v1/players/{player_id}` | Season-aware player profile, event totals, game log, and shot locations |
+| `GET /api/v1/observability/dataset` | Dataset health verdict, sync freshness, and per-season coverage from PucksData's observability views |
+| `GET /api/v1/observability/seasons/{season}/missing-games` | Completed games in a season without events, with their backfill checkpoint state |
+
+The observability endpoints read the `observability` schema created by PucksData
+migration 0010. The read-only role needs `USAGE` on that schema and `SELECT` on
+its views; otherwise the health page reports the dataset as unavailable.
 
 ## Quality checks
 

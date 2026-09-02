@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from pucksstudio.api.routes.games import router as games_router
 from pucksstudio.api.routes.health import router as health_router
+from pucksstudio.api.routes.observability import router as observability_router
 from pucksstudio.api.routes.players import router as players_router
 from pucksstudio.config import get_settings
 from pucksstudio.db.pool import database
@@ -39,3 +40,4 @@ app.add_middleware(
 app.include_router(health_router, prefix="/api/v1")
 app.include_router(games_router, prefix="/api/v1")
 app.include_router(players_router, prefix="/api/v1")
+app.include_router(observability_router, prefix="/api/v1")
