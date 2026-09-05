@@ -49,7 +49,7 @@ def test_incomplete_attempt_types_suppress_shooting_percentage() -> None:
         shots=2,
     )
 
-    assert players_module._skater_summary([game]).shooting_percentage is None
+    assert players_module._skater_summary([game], shots_available=False).shooting_percentage is None
 
 
 @pytest.mark.asyncio
@@ -94,6 +94,10 @@ async def test_skater_profile_derives_totals_and_preserves_attempts(monkeypatch)
 
     async def fetch_dataframe(_database, query_name, parameters):
         nonlocal season_parameters
+        if query_name == "dataset_coverage":
+            return result(query_name, coverage_rows())
+        if query_name.endswith("_official"):
+            return result(query_name, [])
         if query_name == "player_profile":
             return result(query_name, [player_row()])
         if query_name == "player_seasons":
@@ -129,6 +133,7 @@ async def test_skater_profile_derives_totals_and_preserves_attempts(monkeypatch)
                     "time_in_period": "04:12",
                     "result": "goal",
                     "strength": "ev",
+                    "strength_source": "situation_code",
                     "x_coord": 78,
                     "y_coord": 4,
                     "shot_type": "wrist",
@@ -162,6 +167,10 @@ async def test_skater_profile_derives_totals_and_preserves_attempts(monkeypatch)
 @pytest.mark.asyncio
 async def test_goalie_profile_derives_save_percentage(monkeypatch) -> None:
     async def fetch_dataframe(_database, query_name, _parameters):
+        if query_name == "dataset_coverage":
+            return result(query_name, coverage_rows())
+        if query_name.endswith("_official"):
+            return result(query_name, [])
         if query_name == "player_profile":
             return result(query_name, [player_row(position="G")])
         if query_name == "player_seasons":
@@ -204,3 +213,16 @@ async def test_goalie_profile_derives_save_percentage(monkeypatch) -> None:
         "save_percentage": 0.9,
     }
     assert body["skater_summary"] is None
+
+
+def coverage_rows():
+    return [
+        {"subject": subject, "kind": "measure", "first_season": first, "note": "Coverage"}
+        for subject, first in [
+            ("goal", 19171918),
+            ("shots", 19971998),
+            ("hit", 20092010),
+            ("penalty", 19171918),
+            ("faceoff", 20092010),
+        ]
+    ]

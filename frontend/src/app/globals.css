@@ -2015,3 +2015,45 @@ a.game-log-row:hover {
     animation: none;
   }
 }
+
+.official-season {
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  overflow-x: auto;
+}
+
+.official-season p,
+.map-scope {
+  color: #94a3b8;
+  font-size: .875rem;
+  line-height: 1.6;
+}
+
+.official-season table {
+  width: 100%;
+  margin: 1rem 0;
+  border-collapse: collapse;
+  font-size: .875rem;
+}
+
+.official-season caption {
+  caption-side: bottom;
+  text-align: left;
+  padding-top: .75rem;
+  color: #94a3b8;
+}
+
+.official-season th,
+.official-season td {
+  text-align: right;
+  padding: .65rem;
+  border-bottom: 1px solid #ffffff12;
+}
+
+.official-season th:first-child {
+  text-align: left;
+}
+
+.map-scope {
+  padding: 0 1.25rem;
+}

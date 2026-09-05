@@ -47,8 +47,8 @@ export function PlayerGameLog({
             <strong>{game.team_abbrev ?? "—"} vs {game.opponent_abbrev ?? "—"}</strong>
             <span>{scoreLine(game)}</span>
             {goalie
-              ? <><span>{game.saves}</span><span>{game.goals_against}</span><span>{game.shots_against}</span></>
-              : <><span>{game.goals}</span><span>{game.assists}</span><span>{game.points}</span><span>{game.shots}</span></>}
+              ? <><span>{game.saves ?? "—"}</span><span>{game.goals_against}</span><span>{game.shots_against ?? "—"}</span></>
+              : <><span>{game.goals}</span><span>{game.assists}</span><span>{game.points}</span><span>{game.shots ?? "—"}</span></>}
           </Link>
         ))}
         {games.length === 0 && (

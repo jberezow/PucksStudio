@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
+import { OfficialSeasonComparison } from "@/components/official-season";
 import { PlayerGameLog } from "@/components/player-game-log";
 import { PlayerShotMap } from "@/components/player-shot-map";
 import type { PlayerDetailResponse } from "@/components/player-types";
@@ -85,9 +86,11 @@ export function PlayerProfile({
     data && seasonIndex >= 0 && seasonIndex < data.seasons.length - 1
       ? data.seasons[seasonIndex + 1]
       : undefined;
-  const percentageAvailable = data?.role === "goalie"
-    ? data.goalie_summary?.save_percentage !== null
-    : data?.skater_summary?.shooting_percentage !== null;
+  const shotsAvailable = data?.coverage.some((item) =>
+    item.subject === "shots" &&
+    (item.kind === "measure" || item.kind === "event_type") &&
+    item.first_season !== null && data.season >= item.first_season,
+  );
   const stats = data?.role === "goalie" && data.goalie_summary
     ? [
         ["Tracked games", data.goalie_summary.games_with_events],
@@ -102,7 +105,7 @@ export function PlayerProfile({
           ["Goals", data.skater_summary.goals],
           ["Assists", data.skater_summary.assists],
           ["Points", data.skater_summary.points],
-          [percentageAvailable ? "Shots" : "Tracked shots", data.skater_summary.shots],
+          ["Shots", data.skater_summary.shots],
           ["Shooting %", data.skater_summary.shooting_percentage?.toFixed(1) ?? "–"],
         ]
       : [];
@@ -184,11 +187,16 @@ export function PlayerProfile({
 
           {error && <div className="error-banner profile-refresh-error" role="alert">{error}</div>}
 
+          <div aria-busy={loading}>
+            <OfficialSeasonComparison data={data} />
+          </div>
+
+          <p className="eyebrow">Event-derived totals</p>
           <section className="profile-stat-grid" aria-busy={loading}>
             {stats.map(([label, value]) => (
               <div className="profile-stat panel" key={label}>
                 <span>{label}</span>
-                <strong>{value}</strong>
+                <strong>{value ?? "—"}</strong>
               </div>
             ))}
           </section>
@@ -221,17 +229,23 @@ export function PlayerProfile({
                 shooting, or goaltending events. They are traceable to source events, but are not
                 a substitute for lineup, shift, or time-on-ice records.
               </p>
-              {!percentageAvailable && (
+              {!shotsAvailable && (
                 <p className="coverage-warning">
-                  No tracked non-scoring outcomes are available for this profile. Attempt totals
-                  are shown as tracked records and the derived percentage is suppressed.
+                  Shot and save counts and percentages are unavailable for this era.
+                  Goal events may still appear on the map; they do not represent a full shot sample.
                 </p>
               )}
+              {data.caveats.map((note) => <p className="coverage-warning" key={note}>{note}</p>)}
+              <p>Tracked games count scoring, shooting, or goaltending appearances, not official games played. Coverage establishes when tracking began; it does not guarantee every game is complete.</p>
               <small>{data.row_count} mapped events · {data.query_ms.toFixed(1)} ms aggregate query time</small>
             </div>
           </section>
 
-          <PlayerShotMap attempts={data.attempts} role={data.role} />
+          <PlayerShotMap
+            key={`${data.player.player_id}-${data.season}-${data.game_type}`}
+            attempts={data.attempts}
+            role={data.role}
+          />
 
           <PlayerGameLog games={data.games} role={data.role} />
         </>

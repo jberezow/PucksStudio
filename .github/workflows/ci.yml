@@ -13,6 +13,23 @@ jobs:
   backend:
     name: Backend quality gate
     runs-on: ubuntu-latest
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pucksstudio_test
+      PUCKSDATA_MIGRATIONS: ${{ github.workspace }}/.pucksdata-contract/migrations
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pucksstudio_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d pucksstudio_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     defaults:
       run:
         working-directory: backend
@@ -20,6 +37,14 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+
+      - name: Check out compatible PucksData schema
+        uses: actions/checkout@v4
+        with:
+          repository: jberezow/pucksdata
+          ref: 1866b3e71f1e1091af9ca52fba1470c12a7d46e7
+          path: .pucksdata-contract
+          persist-credentials: false
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7

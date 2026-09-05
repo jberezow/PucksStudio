@@ -1,3 +1,5 @@
+import type { CoverageEntry } from "@/components/coverage-types";
+
 export type PlayerSearchItem = {
   player_id: number;
   first_name: string;
@@ -49,6 +51,7 @@ export type PlayerAttempt = {
   time_in_period: string;
   result: "goal" | "shot" | "goal-against" | "save";
   strength: string | null;
+  strength_source: string;
   x_coord: number | null;
   y_coord: number | null;
   shot_type: string | null;
@@ -60,19 +63,42 @@ export type SkaterSummary = {
   goals: number;
   assists: number;
   points: number;
-  shots: number;
+  shots: number | null;
   shooting_percentage: number | null;
 };
 
 export type GoalieSummary = {
   games_with_events: number;
-  saves: number;
+  saves: number | null;
   goals_against: number;
-  shots_against: number;
+  shots_against: number | null;
   save_percentage: number | null;
 };
 
+export type OfficialSeason = {
+  games_played: number | null;
+  goals: number | null;
+  assists: number | null;
+  points: number | null;
+  shots: number | null;
+  shooting_pct: number | null;
+  pp_goals: number | null;
+  sh_goals: number | null;
+  wins: number | null;
+  losses: number | null;
+  ties: number | null;
+  ot_losses: number | null;
+  shutouts: number | null;
+  saves: number | null;
+  goals_against: number | null;
+  shots_against: number | null;
+  save_pct: number | null;
+};
+
 export type PlayerDetailResponse = {
+  official: OfficialSeason | null;
+  coverage: CoverageEntry[];
+  caveats: string[];
   player: PlayerProfileData;
   role: "skater" | "goalie";
   season: number;

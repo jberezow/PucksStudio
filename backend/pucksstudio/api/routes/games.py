@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
 from pucksstudio.db.pool import database
+from pucksstudio.hockey.coverage import CoverageEntry, is_available, season_caveats
 from pucksstudio.hockey.games import parse_playoff_context, present_events, summarize_game
 from pucksstudio.queries.execution import fetch_dataframe
 
@@ -90,6 +91,7 @@ class GameEvent(BaseModel):
     time_in_period: str
     event_type: str
     strength: str | None
+    strength_source: str
     zone_code: str | None
     x_coord: int | None
     y_coord: int | None
@@ -118,11 +120,11 @@ class GameEvent(BaseModel):
 
 class TeamGameStats(BaseModel):
     abbreviation: str
-    goals: int
-    shots_on_goal: int
-    hits: int
-    penalty_minutes: int
-    faceoff_wins: int
+    goals: int | None
+    shots_on_goal: int | None
+    hits: int | None
+    penalty_minutes: int | None
+    faceoff_wins: int | None
 
 
 class PeriodScore(BaseModel):
@@ -140,6 +142,8 @@ class GameAnalytics(BaseModel):
 
 class GameDetailResponse(BaseModel):
     game: GameSummary
+    coverage: list[CoverageEntry]
+    caveats: list[str]
     summary: GameAnalytics
     events: list[GameEvent]
     query_ms: float
@@ -236,10 +240,25 @@ async def game_detail(game_id: int) -> GameDetailResponse:
     events = await fetch_dataframe(database, "game_event_sequence", {"game_id": game_id})
     presented = present_events(events.frame)
     analytics = summarize_game(events.frame, game.away_abbrev, game.home_abbrev)
+    coverage_result = await fetch_dataframe(database, "dataset_coverage", {})
+    coverage = [CoverageEntry.model_validate(row) for row in coverage_result.frame.to_dicts()]
+    summary_model = GameAnalytics.model_validate(analytics, from_attributes=True)
+    for team in (summary_model.away, summary_model.home):
+        for field, subject in {
+            "goals": "goal",
+            "shots_on_goal": "shots",
+            "hits": "hit",
+            "penalty_minutes": "penalty",
+            "faceoff_wins": "faceoff",
+        }.items():
+            if events.frame.is_empty() or not is_available(coverage, subject, game.season):
+                setattr(team, field, None)
     return GameDetailResponse(
         game=game,
-        summary=GameAnalytics.model_validate(analytics, from_attributes=True),
+        summary=summary_model,
+        coverage=coverage,
+        caveats=season_caveats(coverage, game.season),
         events=[GameEvent.model_validate(row) for row in presented.to_dicts()],
-        query_ms=round(summary.elapsed_ms + events.elapsed_ms, 2),
+        query_ms=round(summary.elapsed_ms + events.elapsed_ms + coverage_result.elapsed_ms, 2),
         row_count=events.row_count,
     )

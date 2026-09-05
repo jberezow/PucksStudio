@@ -52,4 +52,8 @@ JOIN games AS g ON g.game_id = e.game_id
 WHERE d.winning_player_id = %(player_id)s
    OR d.losing_player_id = %(player_id)s
 
+UNION
+SELECT season FROM analytics.official_skater_seasons WHERE player_id = %(player_id)s
+UNION
+SELECT season FROM analytics.official_goalie_seasons WHERE player_id = %(player_id)s
 ORDER BY season DESC;

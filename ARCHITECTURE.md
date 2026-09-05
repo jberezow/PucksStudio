@@ -69,13 +69,21 @@ Polars derives presentation-ready game data:
 Player and goalie aggregates are calculated from typed goals and shots.
 Skater profiles expose goals, assists, points, shots, and shooting percentage.
 Goalie profiles expose saves, goals against, shots against, and save
-percentage. Because the source schema does not contain lineups, shifts, or
+percentage. Because the event schema does not contain lineups, shifts, or
 time-on-ice, participation is described as games with tracked events rather
-than official games played. Wins and shutouts are not inferred.
-Derived percentages are suppressed when a player profile contains no tracked
-non-scoring outcomes. This conservative player-level check avoids presenting
-goal-only historical records as complete shot or save samples without adding an
-archive-wide scan to every profile request.
+than official games played. Wins and shutouts are not inferred from events. Official NHL season totals are
+queried separately from `analytics.official_skater_seasons` and
+`analytics.official_goalie_seasons` and compared with tracked counts in the UI.
+The small `analytics.coverage` table establishes when event-derived counts are
+available. Before shot coverage begins, shot/save counts and percentages are
+null, including in game logs. Within covered eras, 100% shooting and 0% saving
+remain valid results; a zero denominator produces null. Known season caveats
+are displayed without discarding available events. The expensive
+`analytics.coverage_observed` view is not queried by request handlers.
+
+Official season values remain nullable and never overwrite event-derived data.
+Season selectors combine attributed event seasons with official season records.
+The comparison displays tracked minus official counts, not a completeness verdict.
 
 Every derived result retains the contributing event records and their source
 identifiers.
@@ -133,8 +141,9 @@ Season shot maps normalize attacking direction and reuse the same SVG rink
 surface as the game viewer. Game-log rows link back to the underlying game and
 date. Available seasons are derived from every typed event role attributable to
 the player, including scoring, goaltending, hits, blocks, penalties, and
-faceoffs; they represent seasons with tracked events rather than official roster
-history.
+faceoffs; they are combined with official season records and do not constitute full roster
+history. Shot-map strength always describes the shooting team; event details
+identify the source used to establish strength.
 
 ## API flow
 
@@ -180,5 +189,10 @@ Backend tests cover:
 - player attempt provenance;
 - dataset health verdicts and gap classification;
 - observability API contracts, caching, and the unavailable state.
+
+The database contract test applies the actual PucksData migrations to disposable
+PostgreSQL, executes every canonical SQL query as a restricted reader, and checks
+API responses for historical, modern, official-only, missing-event, and missing-grant
+cases. CI pins a compatible PucksData commit; the local script can test any checkout.
 
 Frontend CI runs ESLint, TypeScript checking, and a production Next.js build.

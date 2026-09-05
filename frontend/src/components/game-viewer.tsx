@@ -16,7 +16,7 @@ import type {
 import { RinkView } from "@/components/rink-view";
 import { SchedulePicker } from "@/components/schedule-picker";
 import { apiError, apiUrl } from "@/lib/api";
-import { readableDate } from "@/lib/format";
+import { readableDate, strengthSourceLabel } from "@/lib/format";
 
 type HistoryMode = "none" | "push" | "replace";
 
@@ -69,10 +69,11 @@ function EventDetails({ event }: { event: GameEvent }) {
       participant.id !== null && Boolean(participant.name),
   );
   const details = [
-    ["Source event", String(event.event_id)],
+    ["Database event", String(event.event_id)],
     ["In-game ID", String(event.event_id_in_game)],
     ["Team", event.owner_abbrev],
-    ["Strength", event.strength?.toUpperCase()],
+    ["Owner team strength", event.strength?.toUpperCase() ?? "Unknown"],
+    ["Strength source", strengthSourceLabel(event.strength_source)],
     ["Zone", event.zone_code],
     [
       "Coordinates",
@@ -465,13 +466,16 @@ export function GameViewer() {
                       <div className="summary-stat" key={label}>
                         <p>{label}</p>
                         <div>
-                          <strong>{away}</strong>
+                          <strong>{away ?? "—"}</strong>
                           <span>–</span>
-                          <strong>{home}</strong>
+                          <strong>{home ?? "—"}</strong>
                         </div>
                       </div>
                     ))}
                   </div>
+
+                  <p className="mt-4 text-xs text-slate-400">Event-derived totals · — means unavailable. Tracking coverage varies by era; shootout deciders are excluded.</p>
+                  {detail.caveats.map((note) => <p className="coverage-warning" key={note}>{note}</p>)}
 
                   {detail.summary.periods.length > 0 && (
                     <div

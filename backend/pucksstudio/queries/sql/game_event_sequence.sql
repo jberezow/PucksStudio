@@ -6,6 +6,7 @@ SELECT
     e.time_in_period,
     e.event_type,
     e.strength,
+    e.strength_source,
     e.zone_code,
     e.x_coord,
     e.y_coord,

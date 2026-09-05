@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
 from pucksstudio.db.pool import database
+from pucksstudio.hockey.coverage import CoverageEntry, is_available, season_caveats
 from pucksstudio.queries.execution import fetch_dataframe
 
 router = APIRouter(prefix="/players", tags=["players"])
@@ -68,6 +69,7 @@ class PlayerAttempt(BaseModel):
     time_in_period: str
     result: Literal["goal", "shot", "goal-against", "save"]
     strength: str | None
+    strength_source: str
     x_coord: int | None
     y_coord: int | None
     shot_type: str | None
@@ -79,16 +81,36 @@ class SkaterSummary(BaseModel):
     goals: int
     assists: int
     points: int
-    shots: int
+    shots: int | None
     shooting_percentage: float | None
 
 
 class GoalieSummary(BaseModel):
     games_with_events: int
-    saves: int
+    saves: int | None
     goals_against: int
-    shots_against: int
+    shots_against: int | None
     save_percentage: float | None
+
+
+class OfficialSeason(BaseModel):
+    games_played: int | None = None
+    goals: int | None = None
+    assists: int | None = None
+    points: int | None = None
+    shots: int | None = None
+    shooting_pct: float | None = None
+    pp_goals: int | None = None
+    sh_goals: int | None = None
+    wins: int | None = None
+    losses: int | None = None
+    ties: int | None = None
+    ot_losses: int | None = None
+    shutouts: int | None = None
+    saves: int | None = None
+    goals_against: int | None = None
+    shots_against: int | None = None
+    save_pct: float | None = None
 
 
 class PlayerDetailResponse(BaseModel):
@@ -99,13 +121,16 @@ class PlayerDetailResponse(BaseModel):
     seasons: list[int]
     skater_summary: SkaterSummary | None
     goalie_summary: GoalieSummary | None
+    official: OfficialSeason | None
+    coverage: list[CoverageEntry]
+    caveats: list[str]
     games: list[PlayerGame]
     attempts: list[PlayerAttempt]
     query_ms: float
     row_count: int
 
 
-def _skater_summary(games: list[PlayerGame]) -> SkaterSummary:
+def _skater_summary(games: list[PlayerGame], shots_available: bool) -> SkaterSummary:
     goals = sum(game.goals or 0 for game in games)
     assists = sum(game.assists or 0 for game in games)
     shots = sum(game.shots or 0 for game in games)
@@ -114,21 +139,23 @@ def _skater_summary(games: list[PlayerGame]) -> SkaterSummary:
         goals=goals,
         assists=assists,
         points=goals + assists,
-        shots=shots,
-        shooting_percentage=round(goals / shots * 100, 1) if shots > goals else None,
+        shots=shots if shots_available else None,
+        shooting_percentage=round(goals / shots * 100, 1) if shots_available and shots else None,
     )
 
 
-def _goalie_summary(games: list[PlayerGame]) -> GoalieSummary:
+def _goalie_summary(games: list[PlayerGame], shots_available: bool) -> GoalieSummary:
     saves = sum(game.saves or 0 for game in games)
     goals_against = sum(game.goals_against or 0 for game in games)
     shots_against = saves + goals_against
     return GoalieSummary(
         games_with_events=len(games),
-        saves=saves,
+        saves=saves if shots_available else None,
         goals_against=goals_against,
-        shots_against=shots_against,
-        save_percentage=round(saves / shots_against, 3) if saves else None,
+        shots_against=shots_against if shots_available else None,
+        save_percentage=round(saves / shots_against, 3)
+        if shots_available and shots_against
+        else None,
     )
 
 
@@ -165,7 +192,9 @@ async def player_detail(
 
     seasons = [int(value) for value in seasons_result.frame.get_column("season").to_list()]
     if not seasons:
-        raise HTTPException(status_code=404, detail="No seasons with tracked events found")
+        raise HTTPException(
+            status_code=404, detail="No seasons with events or official totals found"
+        )
     selected_season = season if season is not None else seasons[0]
     if selected_season not in seasons:
         raise HTTPException(status_code=404, detail="Season not found")
@@ -177,12 +206,22 @@ async def player_detail(
         "season": selected_season,
         "game_type": game_type,
     }
-    games_result, attempts_result = await asyncio.gather(
+    games_result, attempts_result, official_result, coverage_result = await asyncio.gather(
         fetch_dataframe(database, f"player_{role}_games", parameters),
         fetch_dataframe(database, f"player_{role}_attempts", parameters),
+        fetch_dataframe(database, f"player_{role}_official", parameters),
+        fetch_dataframe(database, "dataset_coverage", {}),
     )
     games = [PlayerGame.model_validate(row) for row in games_result.frame.to_dicts()]
     attempts = [PlayerAttempt.model_validate(row) for row in attempts_result.frame.to_dicts()]
+
+    coverage = [CoverageEntry.model_validate(row) for row in coverage_result.frame.to_dicts()]
+    shots_available = is_available(coverage, "shots", selected_season)
+    if not shots_available:
+        games = [
+            game.model_copy(update={"shots": None, "saves": None, "shots_against": None})
+            for game in games
+        ]
 
     return PlayerDetailResponse(
         player=player,
@@ -190,15 +229,22 @@ async def player_detail(
         season=selected_season,
         game_type=game_type,
         seasons=seasons,
-        skater_summary=_skater_summary(games) if role == "skater" else None,
-        goalie_summary=_goalie_summary(games) if role == "goalie" else None,
+        skater_summary=_skater_summary(games, shots_available) if role == "skater" else None,
+        goalie_summary=_goalie_summary(games, shots_available) if role == "goalie" else None,
+        official=OfficialSeason.model_validate(official_result.frame.to_dicts()[0])
+        if not official_result.frame.is_empty()
+        else None,
+        coverage=coverage,
+        caveats=season_caveats(coverage, selected_season),
         games=games,
         attempts=attempts,
         query_ms=round(
             profile_result.elapsed_ms
             + seasons_result.elapsed_ms
             + games_result.elapsed_ms
-            + attempts_result.elapsed_ms,
+            + attempts_result.elapsed_ms
+            + official_result.elapsed_ms
+            + coverage_result.elapsed_ms,
             2,
         ),
         row_count=len(attempts),

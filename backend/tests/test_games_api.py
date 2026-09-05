@@ -112,6 +112,8 @@ async def test_teams_route_returns_frontend_options(monkeypatch) -> None:
 @pytest.mark.asyncio
 async def test_game_detail_route_returns_summary_and_provenance(monkeypatch) -> None:
     async def fetch_dataframe(_database, query_name, _parameters):
+        if query_name == "dataset_coverage":
+            return result(query_name, coverage_rows())
         if query_name == "game_summary":
             return result(
                 query_name,
@@ -158,6 +160,8 @@ async def test_game_detail_route_returns_summary_and_provenance(monkeypatch) -> 
 @pytest.mark.asyncio
 async def test_eventless_playoff_game_returns_empty_detail(monkeypatch) -> None:
     async def fetch_dataframe(_database, query_name, _parameters):
+        if query_name == "dataset_coverage":
+            return result(query_name, coverage_rows())
         if query_name == "game_summary":
             return result(
                 query_name,
@@ -207,6 +211,7 @@ def _goal_event() -> dict:
         "time_in_period": "04:12",
         "event_type": "goal",
         "strength": "ev",
+        "strength_source": "situation_code",
         "zone_code": "O",
         "x_coord": 78,
         "y_coord": 4,
@@ -231,3 +236,16 @@ def _goal_event() -> dict:
         "faceoff_winner_name": None,
         "faceoff_loser_name": None,
     }
+
+
+def coverage_rows():
+    return [
+        {"subject": subject, "kind": "measure", "first_season": first, "note": "Coverage"}
+        for subject, first in [
+            ("goal", 19171918),
+            ("shots", 19971998),
+            ("hit", 20092010),
+            ("penalty", 19171918),
+            ("faceoff", 20092010),
+        ]
+    ]

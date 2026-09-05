@@ -53,3 +53,13 @@ export function strengthLabel(value: string) {
   };
   return labels[value] ?? value;
 }
+
+export function strengthSourceLabel(value: string) {
+  const labels: Record<string, string> = {
+    situation_code: "NHL situation code",
+    scoring_summary: "NHL scoring summary",
+    html_report: "NHL archived report",
+    unavailable: "Unavailable",
+  };
+  return labels[value] ?? value;
+}

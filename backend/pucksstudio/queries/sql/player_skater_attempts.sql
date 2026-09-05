@@ -6,6 +6,7 @@ SELECT
     e.time_in_period,
     CASE WHEN e.event_type = 'goal' THEN 'goal' ELSE 'shot' END AS result,
     e.strength,
+    e.strength_source,
     e.x_coord,
     e.y_coord,
     sh.shot_type,
@@ -17,4 +18,4 @@ LEFT JOIN teams AS shooting_team ON shooting_team.team_id = e.event_owner_team_i
 WHERE g.season = %(season)s
   AND g.game_type = %(game_type)s
   AND sh.shooting_player_id = %(player_id)s
-ORDER BY g.game_date, e.game_id, e.period, e.time_in_period, e.id;
+ORDER BY g.game_date, e.game_id, e.period, e.time_in_period, e.event_id_in_game;

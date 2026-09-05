@@ -1,3 +1,5 @@
+import type { CoverageEntry } from "@/components/coverage-types";
+
 export type PlayoffContext = {
   round: number;
   series: number;
@@ -30,6 +32,7 @@ export type GameEvent = {
   owner_abbrev: string | null;
   description: string;
   strength: string | null;
+  strength_source: string;
   zone_code: string | null;
   x_coord: number | null;
   y_coord: number | null;
@@ -48,11 +51,11 @@ export type GameEvent = {
 
 export type TeamGameStats = {
   abbreviation: string;
-  goals: number;
-  shots_on_goal: number;
-  hits: number;
-  penalty_minutes: number;
-  faceoff_wins: number;
+  goals: number | null;
+  shots_on_goal: number | null;
+  hits: number | null;
+  penalty_minutes: number | null;
+  faceoff_wins: number | null;
 };
 
 export type PeriodScore = {
@@ -72,6 +75,8 @@ export type GamesResponse = {
 };
 
 export type GameDetailResponse = {
+  coverage: CoverageEntry[];
+  caveats: string[];
   game: Omit<Game, "event_count"> & {
     season: number;
     venue_location: string | null;

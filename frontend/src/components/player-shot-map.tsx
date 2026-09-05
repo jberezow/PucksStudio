@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { FilterSelect } from "@/components/filter-select";
 import type { PlayerAttempt } from "@/components/player-types";
 import { rinkPoint, RinkSurface } from "@/components/rink-surface";
-import { strengthLabel, titleCase } from "@/lib/format";
+import { strengthLabel, strengthSourceLabel, titleCase } from "@/lib/format";
 
 export function PlayerShotMap({
   attempts,
@@ -37,7 +37,7 @@ export function PlayerShotMap({
           attempt.y_coord !== null &&
           (result === "all" || attempt.result === result) &&
           (shotType === "all" || attempt.shot_type === shotType) &&
-          (strength === "all" || attempt.strength?.toUpperCase() === strength),
+          (strength === "all" || (strength === "unknown" ? !attempt.strength : attempt.strength?.toUpperCase() === strength)),
       ),
     [attempts, result, shotType, strength],
   );
@@ -110,11 +110,12 @@ export function PlayerShotMap({
               ))}
           </FilterSelect>
           <FilterSelect
-            label="Strength"
+            label="Shooting team strength"
             onChange={(event) => setStrength(event.target.value)}
             value={strength}
           >
               <option value="all">All strengths</option>
+              {attempts.some((attempt) => !attempt.strength) && <option value="unknown">Unknown</option>}
               {strengths.map((value) => (
                 <option key={value} value={value}>{strengthLabel(value)}</option>
               ))}
@@ -139,7 +140,7 @@ export function PlayerShotMap({
                 : (attempt.x_coord as number);
             const point = rinkPoint(xCoord, attempt.y_coord as number);
             const scored = attempt.result === "goal" || attempt.result === "goal-against";
-            const label = `${titleCase(attempt.result)}, ${attempt.shot_type ?? "unknown shot type"}, ${attempt.game_date}`;
+            const label = `${titleCase(attempt.result)}, ${attempt.shot_type ?? "unknown shot type"}, ${attempt.game_date}, shooting team ${attempt.shooting_team_abbrev ?? "unknown"}, strength ${attempt.strength?.toUpperCase() ?? "unknown"}, source ${strengthSourceLabel(attempt.strength_source)}`;
             return (
               <a
                 aria-label={`${label}; open source game`}
@@ -159,6 +160,7 @@ export function PlayerShotMap({
           })}
         </RinkSurface>
       </div>
+      <p className="map-scope">Strength describes the shooting team. On a goalie map, PP means the opponent was on the power play.</p>
       <div className="rink-footer">
         <div className="rink-legend">
           <span><i className="player-legend-stopped" /> {role === "goalie" ? "Save" : "Shot"}</span>

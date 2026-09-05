@@ -131,7 +131,7 @@ export function RinkView({
               ))}
           </FilterSelect>
           <FilterSelect
-            label="Strength"
+            label="Shooting team strength"
             onChange={(event) => setStrength(event.target.value)}
             value={strength}
           >
@@ -141,7 +141,7 @@ export function RinkView({
                   {strengthLabel(value)}
                 </option>
               ))}
-              {strengths.hasUnspecified && <option value="unspecified">Unspecified</option>}
+              {strengths.hasUnspecified && <option value="unspecified">Unknown</option>}
           </FilterSelect>
         </div>
       </div>

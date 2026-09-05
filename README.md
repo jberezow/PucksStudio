@@ -27,9 +27,12 @@ games, players, goalies, and their underlying play-by-play events.
 - Follow map markers, game-log entries, scorers, shooters, and assists between
   player profiles and source games.
 - Preserve player searches and profile season selections in shareable URLs.
-- Limit player season selectors to seasons with attributable typed events.
-- Suppress derived percentages when historical attempt coverage is
-  insufficient.
+- Limit player season selectors to seasons with attributable events or official totals.
+- Use PucksData's coverage contract to distinguish untracked statistics from zero.
+- Compare official NHL season totals with event-derived counts, showing differences.
+- Include seasons with official totals even when the player has no tracked events.
+- Inspect strength provenance and shooting-team strength, including unknown values.
+- Display known source caveats such as incomplete 2009–10 play-by-play.
 - Inspect query latency and source row counts in the interface.
 - Check dataset health: event coverage per season, goal-to-shot consistency,
   sync freshness, and the games still missing play-by-play.
@@ -163,7 +166,7 @@ The frontend uses these endpoints:
 | Endpoint | Description |
 | --- | --- |
 | `GET /api/v1/health` | Process health |
-| `GET /api/v1/ready` | Database readiness |
+| `GET /api/v1/ready` | Database schema and reader-permission readiness |
 | `GET /api/v1/games` | Games and adjacent game dates, optionally filtered by date and team |
 | `GET /api/v1/games/calendar` | Monthly game-day counts, optionally filtered by team |
 | `GET /api/v1/games/teams` | Teams represented in the game archive |
@@ -173,9 +176,40 @@ The frontend uses these endpoints:
 | `GET /api/v1/observability/dataset` | Dataset health verdict, sync freshness, and per-season coverage from PucksData's observability views |
 | `GET /api/v1/observability/seasons/{season}/missing-games` | Completed games in a season without events, with their backfill checkpoint state |
 
-The observability endpoints require the `observability` schema through PucksData
-migration 0011. The read-only role needs `USAGE` on that schema and `SELECT` on
-its views; otherwise the health page reports the dataset as unavailable.
+## PucksData compatibility
+
+This version requires **PucksData 1.7.0 with migrations through 0018**. In particular,
+strength is nullable and relative to the event owner, and `strength_source`,
+`analytics.coverage`, and the official season tables must exist. Run migrations
+with the PucksData ingestion/admin role before upgrading Studio.
+
+Grant the Studio reader access after applying migrations:
+
+```sql
+GRANT USAGE ON SCHEMA public, analytics, observability TO reader_role;
+GRANT SELECT ON ALL TABLES IN SCHEMA public, analytics, observability TO reader_role;
+```
+
+Replace `reader_role` with your existing read-only role. Studio does not apply
+migrations, change grants, or ingest official statistics. Load official totals
+from PucksData with `pucksdata fetch official-stats --season 20252026` (or omit
+`--season` for all seasons). An empty official table is supported and shown as
+unavailable; official-only seasons are included for players in the player archive.
+
+`/api/v1/ready` checks the required query columns and reader permissions without
+scanning event data. Missing schema or grants return HTTP 503 with an upgrade hint.
+The health page retains its separate dataset-unavailable state.
+
+Official totals and tracked events are displayed separately. Differences mean
+"inspect the source", not necessarily an ingestion failure. Coverage describes
+when tracking began, not a guarantee of complete data in every game. Game logs
+and maps always remain event-derived; unknown counts are shown as a dash.
+Strength on shot maps describes the shooting team, including on goalie profiles.
+Official shooting percentages are stored as fractions and displayed as percentages.
+
+The CI contract test pins PucksData commit
+`1866b3e71f1e1091af9ca52fba1470c12a7d46e7`. Update this pin deliberately alongside
+future schema changes, and run the suite against the proposed PucksData checkout.
 
 ## Quality checks
 
@@ -197,8 +231,21 @@ npm run typecheck
 npm run build
 ```
 
+Run all backend tests against the sibling PucksData repository's actual migrations
+in disposable PostgreSQL (requires Docker):
+
+```bash
+./scripts/test-database.sh
+```
+
+Set `PUCKSDATA_MIGRATIONS=/absolute/path/to/migrations` for another checkout.
+The script uses a random local port and removes the container and its data on exit.
+The integration test only uses `TEST_DATABASE_URL`, never `DATABASE_URL`, and
+refuses a database whose name lacks `test` or already contains PucksData tables.
+Without `TEST_DATABASE_URL`, only the database integration test is skipped.
+
 The same checks run in GitHub Actions for pushes and pull requests targeting
-`prime`.
+`prime`, including the migration contract test with a restricted reader role.
 
 ## Project structure
 
