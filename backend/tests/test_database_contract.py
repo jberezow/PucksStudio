@@ -30,7 +30,7 @@ def migrated_database():
             "PUCKSDATA_MIGRATIONS", Path(__file__).resolve().parents[3] / "PucksData/migrations"
         )
     )
-    if not (migrations / "0018_coverage_observed_single_scan.sql").is_file():
+    if not (migrations / "0019_player_event_seasons.sql").is_file():
         pytest.fail("Set PUCKSDATA_MIGRATIONS to PucksData's current migrations directory")
     with psycopg.connect(url, autocommit=True) as connection:
         if connection.execute("SELECT to_regclass('public.games')").fetchone()[0]:
