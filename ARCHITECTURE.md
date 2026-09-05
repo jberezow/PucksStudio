@@ -83,6 +83,9 @@ are displayed without discarding available events. The expensive
 
 Official season values remain nullable and never overwrite event-derived data.
 Season selectors combine attributed event seasons with official season records.
+The event side is read from `analytics.player_event_seasons`, a rollup PucksData
+maintains and refreshes after each backfill and sync; PucksStudio does not
+re-derive it from the typed event tables, which cost seconds per player page.
 The comparison displays tracked minus official counts, not a completeness verdict.
 
 Every derived result retains the contributing event records and their source
