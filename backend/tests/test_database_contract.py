@@ -51,10 +51,14 @@ def migrated_database():
                 (2025020002, 20252026, '2025-10-02', 1, 2, 2, 'OFF', 2, 0);
             INSERT INTO events (game_id, event_id_in_game, period, period_type,
                                 time_in_period, event_type, event_owner_team_id,
-                                strength, strength_source, x_coord, y_coord) VALUES
-                (1989020001, 1, 1, 'REG', '01:00', 'goal', 1, NULL, 'unavailable', 70, 5),
-                (2009020001, 1, 1, 'REG', '01:00', 'goal', 1, 'pp', 'situation_code', 70, 5),
-                (2025020001, 1, 1, 'REG', '01:00', 'goal', 1, 'pp', 'situation_code', 70, 5);
+                                strength, strength_source, x_coord, y_coord,
+                                season, game_type, game_date) VALUES
+                (1989020001, 1, 1, 'REG', '01:00', 'goal', 1, NULL, 'unavailable',
+                 70, 5, 19891990, 2, '1989-10-01'),
+                (2009020001, 1, 1, 'REG', '01:00', 'goal', 1, 'pp', 'situation_code',
+                 70, 5, 20092010, 2, '2009-10-01'),
+                (2025020001, 1, 1, 'REG', '01:00', 'goal', 1, 'pp', 'situation_code',
+                 70, 5, 20252026, 2, '2025-10-01');
             INSERT INTO goals (event_id, scorer_player_id, goalie_id)
                 SELECT id, 1, 2 FROM events;
             INSERT INTO shots (event_id, shooting_player_id, goalie_in_net_id)
@@ -144,7 +148,7 @@ async def test_queries_and_api_against_current_migrations(migrated_database):
                 try:
                     unavailable = await client.get("/api/v1/ready")
                     assert unavailable.status_code == 503
-                    assert "0018" in unavailable.json()["detail"]
+                    assert "0019" in unavailable.json()["detail"]
                     assert (await client.get("/api/v1/players/1")).status_code == 503
                 finally:
                     admin.execute("GRANT SELECT ON analytics.coverage TO studio_contract_reader")

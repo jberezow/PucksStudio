@@ -36,13 +36,13 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Check out compatible PucksData schema
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: jberezow/pucksdata
-          ref: 8b2796f00377e86dcc33242481112e6ce2100008
+          ref: 615350dcc632050252b9495a89ad63b6ae33b597
           path: .pucksdata-contract
           persist-credentials: false
 
@@ -75,10 +75,10 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm

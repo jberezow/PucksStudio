@@ -178,10 +178,12 @@ The frontend uses these endpoints:
 
 ## PucksData compatibility
 
-This version requires **PucksData 1.7.0 with migrations through 0018**. In particular,
+This version requires **PucksData 1.7.0 with migrations through 0019**. In particular,
 strength is nullable and relative to the event owner, and `strength_source`,
-`analytics.coverage`, and the official season tables must exist. Run migrations
-with the PucksData ingestion/admin role before upgrading Studio.
+`analytics.coverage`, the official season tables, and the
+`analytics.player_event_seasons` rollup must exist. Studio's compatibility suite
+is also exercised against the complete current PucksData migration set. Run
+migrations with the PucksData ingestion/admin role before upgrading Studio.
 
 Grant the Studio reader access after applying migrations:
 
@@ -208,7 +210,7 @@ Strength on shot maps describes the shooting team, including on goalie profiles.
 Official shooting percentages are stored as fractions and displayed as percentages.
 
 The CI contract test pins PucksData commit
-`1866b3e71f1e1091af9ca52fba1470c12a7d46e7`. Update this pin deliberately alongside
+`615350dcc632050252b9495a89ad63b6ae33b597`. Update this pin deliberately alongside
 future schema changes, and run the suite against the proposed PucksData checkout.
 
 ## Quality checks
