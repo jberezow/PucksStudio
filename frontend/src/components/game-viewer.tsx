@@ -439,6 +439,7 @@ export function GameViewer() {
                     <div className="text-left text-xs leading-6 text-slate-500 sm:text-right">
                       <p>Game {selected.game_id}</p>
                       <p>{detail.row_count} recorded events</p>
+                      <Link href={`/lines?game_id=${selected.game_id}`}>Explore line combinations →</Link>
                       <p>{detail.query_ms.toFixed(1)} ms query time</p>
                     </div>
                   </div>

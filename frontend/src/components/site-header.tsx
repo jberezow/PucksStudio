@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-export type SiteSection = "games" | "players" | "health";
+export type SiteSection = "games" | "players" | "health" | "lines";
 export type StatusTone = "ok" | "info" | "warn" | "bad";
 export type SiteStatus = { label: string; tone: StatusTone };
 
@@ -25,6 +25,7 @@ export function SiteHeader({ current, status = defaultStatus }: SiteHeaderProps)
         <Link aria-current={current === "players" ? "page" : undefined} href="/players">
           Players
         </Link>
+        <Link aria-current={current === "lines" ? "page" : undefined} href="/lines">Lines</Link>
         <Link aria-current={current === "health" ? "page" : undefined} href="/health">
           Health
         </Link>

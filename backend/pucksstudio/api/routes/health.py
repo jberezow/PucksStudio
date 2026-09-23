@@ -13,10 +13,20 @@ async def health() -> dict[str, str]:
 
 @router.get("/ready")
 async def ready() -> dict[str, str]:
-    parameters = {"game_id": 0, "player_id": 0, "season": 0, "game_type": 2}
+    parameters = {
+        "game_id": 0,
+        "player_id": 0,
+        "season": 0,
+        "game_type": 2,
+        "team_id": 0,
+        "date_from": None,
+        "date_to": None,
+    }
     async with database.connection() as connection:
         for name in (
             "dataset_coverage",
+            "line_games",
+            "line_shifts",
             "game_event_sequence",
             "player_skater_official",
             "player_goalie_official",

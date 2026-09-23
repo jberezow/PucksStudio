@@ -42,7 +42,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: jberezow/pucksdata
-          ref: 615350dcc632050252b9495a89ad63b6ae33b597
+          ref: a2e8e9a5626cc7067428a1fdd3c90856db2b69a1
           path: .pucksdata-contract
           persist-credentials: false
 

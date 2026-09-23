@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { PlayerPortrait } from "@/components/player-portrait";
 import { AppShell } from "@/components/app-shell";
 import { OfficialSeasonComparison } from "@/components/official-season";
 import { PlayerGameLog } from "@/components/player-game-log";
@@ -128,6 +129,7 @@ export function PlayerProfile({
             <div>
               <Link className="profile-back" href={directoryHref}>← Player directory</Link>
               <p className="eyebrow">{data.role === "goalie" ? "Goalie profile" : "Skater profile"}</p>
+              <PlayerPortrait name={`${player.first_name} ${player.last_name}`} url={player.headshot_url ?? null} />
               <h1>{player.first_name} {player.last_name}</h1>
               <p>
                 {[player.current_team_abbrev, player.position, player.shoots_catches ? `${player.shoots_catches} handed` : null]

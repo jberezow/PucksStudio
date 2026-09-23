@@ -3,6 +3,7 @@ SELECT
     first_name,
     last_name,
     position,
+    headshot_url,
     shoots_catches,
     current_team_abbrev,
     birth_date,

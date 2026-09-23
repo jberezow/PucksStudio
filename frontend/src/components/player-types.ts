@@ -5,6 +5,7 @@ export type PlayerSearchItem = {
   first_name: string;
   last_name: string;
   position: string | null;
+  headshot_url?: string | null;
   shoots_catches: string | null;
   current_team_abbrev: string | null;
 };

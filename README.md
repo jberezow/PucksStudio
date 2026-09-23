@@ -178,10 +178,12 @@ The frontend uses these endpoints:
 
 ## PucksData compatibility
 
-This version requires **PucksData 1.7.0 with migrations through 0019**. In particular,
+This version requires **PucksData migrations through 0032**. In particular,
 strength is nullable and relative to the event owner, and `strength_source`,
 `analytics.coverage`, the official season tables, and the
-`analytics.player_event_seasons` rollup must exist. Studio's compatibility suite
+`analytics.player_event_seasons` rollup must exist. Line analysis additionally
+requires typed shifts, NHL team identities, shift fetch status, player headshots,
+and official player/game tables. Studio's compatibility suite
 is also exercised against the complete current PucksData migration set. Run
 migrations with the PucksData ingestion/admin role before upgrading Studio.
 
@@ -210,8 +212,10 @@ Strength on shot maps describes the shooting team, including on goalie profiles.
 Official shooting percentages are stored as fractions and displayed as percentages.
 
 The CI contract test pins PucksData commit
-`615350dcc632050252b9495a89ad63b6ae33b597`. Update this pin deliberately alongside
+`a2e8e9a5626cc7067428a1fdd3c90856db2b69a1`. Update this pin deliberately alongside
 future schema changes, and run the suite against the proposed PucksData checkout.
+Publish the PucksData contract commit before publishing this Studio branch so CI
+can fetch the pinned migration set.
 
 ## Quality checks
 
@@ -268,3 +272,55 @@ frontend/
 ## License
 
 PucksStudio is available under the [MIT License](LICENSE).
+
+### Observed line combinations
+
+The **Lines** page (`/lines`) reconstructs five-on-five forward trios and defense
+pairs from existing raw shifts. Open it from a game or select a team, season,
+competition and optional date window. Filters are shareable URL parameters.
+Cards show portraits, shared time, share of reconstructed team five-on-five time,
+game appearances and continuous deployments, with per-game usage and interval
+evidence. Rankings describe observed usage, not coaching intent or projected lines.
+
+New endpoints:
+
+- `GET /api/v1/lines/options`: archive teams and seasons.
+- `GET /api/v1/lines?game_id=2024021200&team_id=17`: one game; team defaults to home.
+- `GET /api/v1/lines?season=20242025&team_id=17&game_type=2`: a team season.
+  Optional `date_from` and `date_to` are inclusive; `limit` is 1–50 units per kind.
+
+`team_id` is the **franchise ID** returned by Studio's team options, never the raw
+NHL team ID. The read-only query resolves raw shifts through PucksData's
+`nhl_team_identities` mapping. Game-specific player positions take precedence over
+player metadata. Missing player names use an identifier fallback; unknown roles
+cannot contribute to reconstructed five-on-five time.
+
+Migrations through **0032** are required. Apply the additive migration using the
+PucksData admin role, then grant the Studio reader SELECT on `shifts`,
+`nhl_team_identities`, `shift_fetch_status`, and the existing player/game tables.
+No stored shifts are rewritten and no shift backfill needs to be repeated. The
+mapping is seeded for existing NHL identities; `pucksdata fetch teams` refreshes
+it for future identities. New PucksData loaders record fetch outcomes, but older
+loaders can continue storing shifts without those records. Studio labels missing
+rows with no recorded outcome as “No shifts stored,” not “Source unavailable.”
+
+Only completed regular-season and playoff games from 2010–11 onward are supported.
+Missing games never count as zero-minute appearances. Both teams must have five
+identified skaters and a goalie; duplicate/overlapping player intervals count once.
+Invalid clocks or unresolved team/player IDs conservatively exclude the affected
+period. Unknown roles, missing goalies and ambiguous manpower exclude the affected
+interval. Boundaries, rather than an inconsistent source duration string, determine
+elapsed time; disagreements are disclosed. Normal units require three forwards and
+two defensemen. Unclassified time and quality counts remain visible per game.
+
+There is no persistent aggregate or cache: each request reads stored shifts, so
+later backfills and snapshot replacements are reflected on the next request.
+Evidence is capped at 100 intervals per unit for a single game and 12 for a season;
+all contributing game totals and deployment counts are retained. Player portraits
+use ingested NHL URLs with an initials fallback and may show current jerseys.
+
+Validation on a read-only copy of Pittsburgh's 2024–25 season found 79 loaded/usable
+games out of 82, using 60,431 source rows. The remote read took about 5.2 seconds;
+analysis took 0.9 seconds on the development machine. These are sample timings,
+not a service-level guarantee. Development and contract tests use disposable
+PostgreSQL; the feature does not modify the source database.

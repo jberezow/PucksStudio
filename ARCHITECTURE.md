@@ -199,3 +199,25 @@ API responses for historical, modern, official-only, missing-event, and missing-
 cases. CI pins a compatible PucksData commit; the local script can test any checkout.
 
 Frontend CI runs ESLint, TypeScript checking, and a production Next.js build.
+
+## Line reconstruction
+
+PucksData owns raw shifts, the NHL-team-to-franchise mapping and latest fetch
+outcomes. Studio reads both teams' shifts and reconstructs half-open intervals
+without modifying source rows. A boundary sweep unions overlapping intervals per
+player and counts each player once. Only verified five-on-five intervals with a
+goalie on each side contribute to normal forward-trio and defense-pair cards.
+
+The analytical layer is in `hockey/lines.py`; SQL scope/identity work remains in
+canonical queries, and CPU work runs outside the asynchronous request loop.
+Per-game sufficient statistics are aggregated into season results. No season-wide
+raw interval self-join, persistent derived table or cached snapshot is used. Missing
+games and excluded intervals are reported separately from usage, and per-game
+positions take precedence over current player metadata. Cards preserve links to
+contributing games and elapsed-period intervals.
+
+Studio's reader needs the additive PucksData migration 0032. This extends the
+contract without rewriting existing shifts or requiring re-fetches. The latest
+fetch outcome is separate from snapshot freshness: a failed refresh may leave
+older rows available. Absence of a status row cannot establish whether an older
+loader attempted the game. Readiness probes both new canonical queries.

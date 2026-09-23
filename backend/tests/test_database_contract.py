@@ -11,7 +11,7 @@ from httpx import ASGITransport, AsyncClient
 from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
 from pucksstudio.api.errors import register_schema_errors
-from pucksstudio.api.routes import games, health, players
+from pucksstudio.api.routes import games, health, lines, players
 from pucksstudio.config import Settings
 from pucksstudio.db.pool import database
 from pucksstudio.queries import load_query
@@ -30,7 +30,7 @@ def migrated_database():
             "PUCKSDATA_MIGRATIONS", Path(__file__).resolve().parents[3] / "PucksData/migrations"
         )
     )
-    if not (migrations / "0019_player_event_seasons.sql").is_file():
+    if not (migrations / "0032_shift_analytics_contract.sql").is_file():
         pytest.fail("Set PUCKSDATA_MIGRATIONS to PucksData's current migrations directory")
     with psycopg.connect(url, autocommit=True) as connection:
         if connection.execute("SELECT to_regclass('public.games')").fetchone()[0]:
@@ -89,6 +89,7 @@ async def test_queries_and_api_against_current_migrations(migrated_database):
     app.include_router(health.router, prefix="/api/v1")
     app.include_router(games.router, prefix="/api/v1")
     app.include_router(players.router, prefix="/api/v1")
+    app.include_router(lines.router, prefix="/api/v1")
     try:
         # Execute every canonical query, including views, as the actual reader role.
         parameters = dict(
@@ -97,6 +98,9 @@ async def test_queries_and_api_against_current_migrations(migrated_database):
             season=20252026,
             game_type=2,
             game_date=date(2025, 10, 1),
+            team_id=1,
+            date_from=None,
+            date_to=None,
             month_start=date(2025, 10, 1),
             team=None,
             query="Test",
@@ -148,9 +152,77 @@ async def test_queries_and_api_against_current_migrations(migrated_database):
                 try:
                     unavailable = await client.get("/api/v1/ready")
                     assert unavailable.status_code == 503
-                    assert "0019" in unavailable.json()["detail"]
+                    assert "0032" in unavailable.json()["detail"]
                     assert (await client.get("/api/v1/players/1")).status_code == 503
                 finally:
                     admin.execute("GRANT SELECT ON analytics.coverage TO studio_contract_reader")
+    finally:
+        await database.close()
+
+
+@pytest.mark.asyncio
+async def test_line_contract_resolves_nhl_ids_and_preserves_snapshot_status(migrated_database):
+    with psycopg.connect(os.environ["TEST_DATABASE_URL"], autocommit=True) as admin:
+        admin.execute("""
+            INSERT INTO teams VALUES
+                (38, 'Vegas Golden Knights', 'Golden Knights', 'Vegas', 'VGK'),
+                (39, 'Seattle Kraken', 'Kraken', 'Seattle', 'SEA');
+            INSERT INTO games (game_id, season, game_date, home_team_id, away_team_id,
+                               game_type, game_state)
+                VALUES (2024020001, 20242025, '2024-10-01', 38, 39, 2, 'OFF');
+            INSERT INTO shift_fetch_status (game_id, status) VALUES (2024020001, 'unavailable');
+        """)
+        for index in range(12):
+            player_id = 1000 + index
+            position = "C" if index % 6 < 3 else "D" if index % 6 < 5 else "G"
+            admin.execute(
+                "INSERT INTO players (player_id, first_name, last_name, position, headshot_url) "
+                "VALUES (%s, 'Line', %s, %s, 'https://assets.nhle.com/test.png')",
+                (player_id, str(index), position),
+            )
+            for period in (1, 2, 3):
+                admin.execute(
+                    "INSERT INTO shifts (game_id, source_shift_id, type_code, player_id, "
+                    "team_id, period, start_time_seconds, end_time_seconds) "
+                    "VALUES (2024020001, %s, 517, %s, %s, %s, 0, 1200)",
+                    (period * 100 + index, player_id, 54 if index < 6 else 55, period),
+                )
+        # Per-game position must take precedence over present-day metadata.
+        admin.execute("UPDATE players SET position = 'G' WHERE player_id = 1000")
+        admin.execute("""
+            INSERT INTO analytics.official_skater_games
+                (game_id, player_id, season, game_type, full_name, position_code)
+            VALUES (2024020001, 1000, 20242025, 2, 'Line 0', 'C');
+        """)
+    await database.open(Settings(DATABASE_URL=migrated_database))
+    app = FastAPI()
+    register_schema_errors(app)
+    app.include_router(lines.router, prefix="/api/v1")
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.get("/api/v1/lines?game_id=2024020001&team_id=38")
+            assert response.status_code == 200, response.text
+            body = response.json()
+            assert body["status"] == "available"
+            assert body["five_on_five_seconds"] == 3600
+            assert body["games"][0]["fetch_status"] == "unavailable"
+            assert body["forward_trios"][0]["players"][0]["player_id"] == 1000
+            assert body["forward_trios"][0]["players"][0]["headshot_url"]
+            assert body["forward_trios"][0]["deployments"] == 3
+            seasonal = await client.get(
+                "/api/v1/lines?season=20242025&team_id=38&date_from=2024-10-01&date_to=2024-10-01"
+            )
+            assert seasonal.status_code == 200, seasonal.text
+            assert seasonal.json()["forward_trios"] == body["forward_trios"]
+            old = await client.get("/api/v1/lines?season=19891990&team_id=1")
+            assert old.json()["status"] == "unsupported"
+            with psycopg.connect(os.environ["TEST_DATABASE_URL"], autocommit=True) as admin:
+                admin.execute(
+                    "DELETE FROM shifts WHERE game_id = 2024020001 AND player_id = 1011 "
+                    "AND period = 1"
+                )
+            partial = (await client.get("/api/v1/lines?game_id=2024020001")).json()
+            assert partial["status"] == "partial"
+            assert partial["five_on_five_seconds"] == 2400
     finally:
         await database.close()

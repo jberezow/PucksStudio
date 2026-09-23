@@ -28,6 +28,7 @@ class PlayerSearchResponse(BaseModel):
 
 
 class PlayerProfile(BaseModel):
+    headshot_url: str | None = None
     player_id: int
     first_name: str
     last_name: str
