@@ -47,7 +47,7 @@ class Assessment:
 
 
 def classify_gap(backfill_status: str | None) -> GapKind:
-    """Mirror PucksData's sync rule: done or skipped checkpoints are never retried."""
+    """Classify legacy checkpoint gaps; correction refreshes can still revisit them."""
 
     if backfill_status in ACKNOWLEDGED_BACKFILL_STATUSES:
         return "acknowledged"
@@ -139,7 +139,7 @@ def assess(
                 code="acknowledged_gaps",
                 severity="info",
                 message=(
-                    f"{_plural(acknowledged, 'known gap')} the pipeline will not retry across "
+                    f"{_plural(acknowledged, 'acknowledged gap')} across "
                     f"{_plural(seasons, 'season')}"
                 ),
                 count=acknowledged,
@@ -182,6 +182,23 @@ def assess(
             )
         )
         escalate("attention")
+
+    for code, description in (
+        ("ingestion_failed", "failed"),
+        ("ingestion_partial", "partially completed"),
+        ("ingestion_stalled", "still running after two hours"),
+    ):
+        count = int(summary.get(code) or 0)
+        if count:
+            reasons.append(
+                HealthReason(
+                    code=code,
+                    severity="warning",
+                    message=f"{_plural(count, 'ingestion operation')} {description}",
+                    count=count,
+                )
+            )
+            escalate("attention")
 
     latest_completed = summary.get("latest_completed_game_date")
     latest_event = summary.get("latest_event_game_date")

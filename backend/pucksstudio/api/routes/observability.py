@@ -42,6 +42,9 @@ class HealthReasonModel(BaseModel):
 
 
 class DatasetSummary(BaseModel):
+    ingestion_failed: int = 0
+    ingestion_partial: int = 0
+    ingestion_stalled: int = 0
     last_sync_at: datetime | None
     last_sync_games: int | None
     latest_completed_game_date: date | None
@@ -139,7 +142,7 @@ async def _fetch_snapshot() -> _HealthSnapshot:
             status_code=503,
             detail=(
                 "Observability views are unavailable to PucksStudio: "
-                f"{error.diag.message_primary or error}. Apply PucksData migration 0011 "
+                f"{error.diag.message_primary or error}. Apply PucksData migrations through 0034 "
                 "and grant USAGE on schema observability plus SELECT on its views to "
                 "the read-only role."
             ),

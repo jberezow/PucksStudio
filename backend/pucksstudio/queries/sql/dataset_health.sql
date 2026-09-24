@@ -13,5 +13,18 @@ SELECT
     backfill_failed,
     backfill_pending,
     backfill_skipped,
-    healthy
+    healthy AND ingestion_failed = 0 AND ingestion_partial = 0
+        AND ingestion_stalled = 0 AS healthy,
+    ingestion_failed,
+    ingestion_partial,
+    ingestion_stalled
 FROM observability.dataset_health
+CROSS JOIN (
+    SELECT
+        COUNT(*) FILTER (WHERE outcome = 'failed') AS ingestion_failed,
+        COUNT(*) FILTER (WHERE outcome = 'partial') AS ingestion_partial,
+        COUNT(*) FILTER (
+            WHERE outcome = 'running' AND last_attempt_at < NOW() - INTERVAL '2 hours'
+        ) AS ingestion_stalled
+    FROM observability.ingestion_freshness
+) attempts

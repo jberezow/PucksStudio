@@ -36,7 +36,7 @@ const verdictPresentation: Record<Verdict, { label: string; tone: StatusTone; su
   attention: {
     label: "Attention required",
     tone: "warn",
-    summary: "Some completed games or ingestion checkpoints need an operator.",
+    summary: "Some completed games or ingestion operations need an operator.",
   },
 };
 
@@ -348,7 +348,7 @@ export function DatasetHealth({ initialSeason }: { initialSeason: number | null 
                 <dt>Games in last sync</dt>
                 <dd>{count(summary.last_sync_games)}</dd>
                 <small>
-                  {summary.last_sync_games === 0 ? "Nothing new to ingest" : "Ingested by the run"}
+                  {summary.last_sync_games === 0 ? "No event games loaded" : "Ingested by the run"}
                 </small>
               </div>
             </dl>
@@ -593,7 +593,7 @@ export function DatasetHealth({ initialSeason }: { initialSeason: number | null 
                               {game.backfill_error ?? (
                                 <span className="health-dim">
                                   {game.gap_kind === "acknowledged"
-                                    ? "Acknowledged, will not retry"
+                                    ? "Acknowledged gap"
                                     : "—"}
                                 </span>
                               )}
@@ -610,7 +610,7 @@ export function DatasetHealth({ initialSeason }: { initialSeason: number | null 
 
           <footer className="health-footer">
             <span>
-              Views: <b>dataset_health</b> · <b>season_health</b>
+              Views: <b>dataset_health</b> · <b>season_health</b> · <b>ingestion_freshness</b>
             </span>
             <span>
               <b>{data.row_count} seasons</b> · <b>{data.query_ms.toFixed(1)} ms</b> query time ·

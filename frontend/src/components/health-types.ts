@@ -10,6 +10,9 @@ export type HealthReason = {
 };
 
 export type DatasetSummary = {
+  ingestion_failed: number;
+  ingestion_partial: number;
+  ingestion_stalled: number;
   last_sync_at: string | null;
   last_sync_games: number | null;
   latest_completed_game_date: string | null;
