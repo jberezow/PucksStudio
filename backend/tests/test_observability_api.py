@@ -151,7 +151,7 @@ async def test_missing_views_or_grants_report_unavailable(monkeypatch) -> None:
     assert response.status_code == 503
     detail = response.json()["detail"]
     assert "permission denied for schema observability" in detail
-    assert "migration 0011" in detail
+    assert "migrations through 0034" in detail
 
 
 @pytest.mark.asyncio
@@ -222,3 +222,14 @@ async def test_missing_games_rejects_malformed_season(monkeypatch) -> None:
 
     assert not_consecutive.status_code == 422
     assert too_short.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_failed_correction_overrides_recent_sync(monkeypatch) -> None:
+    install_fetch(monkeypatch, dataset=dataset_row(ingestion_failed=1))
+    async with AsyncClient(transport=ASGITransport(app=make_app()), base_url="http://t") as client:
+        response = await client.get("/api/v1/observability/dataset")
+    assert response.status_code == 200
+    assert response.json()["verdict"] == "attention"
+    assert response.json()["summary"]["ingestion_failed"] == 1
+    assert "ingestion_failed" in [r["code"] for r in response.json()["reasons"]]

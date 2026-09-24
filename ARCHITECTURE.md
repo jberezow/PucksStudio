@@ -104,17 +104,22 @@ has events and every goal has a shots row. PucksStudio treats them as the
 contract and does not recompute their figures.
 
 PucksStudio uses the views' acknowledged and actionable gap counts when deriving
-its verdict. One additional judgement is layered on top in
+its verdict. Additional checks are layered on top in
 `hockey/observability.py`:
 
 - Freshness. A failed pipeline run leaves `sync_state` untouched, so the age of
   the last successful sync is compared with a configurable window. Freshness
   never keys off game dates, which are legitimately months old in the
   offseason.
-- Gap classification. PucksData reports games it will not retry as acknowledged
-  and the remaining gaps as actionable. Only actionable gaps, failed or pending
-  backfills, orphaned goals, or events trailing the schedule raise the verdict
-  to "attention".
+- Ingestion outcomes. Migration 0034 exposes each operation's latest attempt
+  through `observability.ingestion_freshness`. Failed and partial attempts
+  require attention immediately; running attempts do so after two hours.
+  Complete, unavailable, and recent running attempts do not raise an alert.
+  Counts include pipeline and derived refreshes.
+- Gap classification. PucksData reports acknowledged checkpoint gaps
+  and the remaining gaps as actionable. Correction refreshes may revisit either.
+  Actionable gaps, failed or pending backfills, orphaned goals, and events
+  trailing the schedule also raise the verdict to "attention".
 
 The two health queries run concurrently and the snapshot is cached briefly
 in process, since each view scans every completed game. A missing schema or

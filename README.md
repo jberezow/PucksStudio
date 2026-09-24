@@ -178,7 +178,7 @@ The frontend uses these endpoints:
 
 ## PucksData compatibility
 
-This version requires **PucksData migrations through 0032**. In particular,
+This version requires **PucksData migrations through 0034**. In particular,
 strength is nullable and relative to the event owner, and `strength_source`,
 `analytics.coverage`, the official season tables, and the
 `analytics.player_event_seasons` rollup must exist. Line analysis additionally
@@ -194,8 +194,17 @@ GRANT USAGE ON SCHEMA public, analytics, observability TO reader_role;
 GRANT SELECT ON ALL TABLES IN SCHEMA public, analytics, observability TO reader_role;
 ```
 
-Replace `reader_role` with your existing read-only role. Studio does not apply
-migrations, change grants, or ingest official statistics. Load official totals
+Replace `reader_role` with your existing read-only role. Repeat these grants after
+migration 0034 so Studio can read `observability.ingestion_freshness`. Studio does
+not need access to the underlying `ingestion` or `history` schemas. The health
+verdict includes latest failed/partial operations and running attempts older
+than two hours, even when existing events are complete and the last successful
+sync is recent. Normal running operations and expected unavailable sources do
+not raise an ingestion alert. Counts describe operations, not distinct games.
+Current game/player/line queries read corrected tables on each request; no
+correction ledger or historical replay is required in Studio.
+
+Studio does not apply migrations, change grants, or ingest official statistics. Load official totals
 from PucksData with `pucksdata fetch official-stats --season 20252026` (or omit
 `--season` for all seasons). An empty official table is supported and shown as
 unavailable; official-only seasons are included for players in the player archive.
@@ -212,7 +221,7 @@ Strength on shot maps describes the shooting team, including on goalie profiles.
 Official shooting percentages are stored as fractions and displayed as percentages.
 
 The CI contract test pins PucksData commit
-`a2e8e9a5626cc7067428a1fdd3c90856db2b69a1`. Update this pin deliberately alongside
+`b5d6769c391c07f7b95365349876e2fa1afafe3e`. Update this pin deliberately alongside
 future schema changes, and run the suite against the proposed PucksData checkout.
 Publish the PucksData contract commit before publishing this Studio branch so CI
 can fetch the pinned migration set.

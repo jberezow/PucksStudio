@@ -30,7 +30,7 @@ def migrated_database():
             "PUCKSDATA_MIGRATIONS", Path(__file__).resolve().parents[3] / "PucksData/migrations"
         )
     )
-    if not (migrations / "0032_shift_analytics_contract.sql").is_file():
+    if not (migrations / "0034_ingestion_history.sql").is_file():
         pytest.fail("Set PUCKSDATA_MIGRATIONS to PucksData's current migrations directory")
     with psycopg.connect(url, autocommit=True) as connection:
         if connection.execute("SELECT to_regclass('public.games')").fetchone()[0]:
@@ -152,7 +152,7 @@ async def test_queries_and_api_against_current_migrations(migrated_database):
                 try:
                     unavailable = await client.get("/api/v1/ready")
                     assert unavailable.status_code == 503
-                    assert "0032" in unavailable.json()["detail"]
+                    assert "0034" in unavailable.json()["detail"]
                     assert (await client.get("/api/v1/players/1")).status_code == 503
                 finally:
                     admin.execute("GRANT SELECT ON analytics.coverage TO studio_contract_reader")
@@ -224,5 +224,62 @@ async def test_line_contract_resolves_nhl_ids_and_preserves_snapshot_status(migr
             partial = (await client.get("/api/v1/lines?game_id=2024020001")).json()
             assert partial["status"] == "partial"
             assert partial["five_on_five_seconds"] == 2400
+    finally:
+        await database.close()
+
+
+@pytest.mark.asyncio
+async def test_health_reads_latest_ingestion_outcomes_with_view_only_grants(migrated_database):
+    with psycopg.connect(os.environ["TEST_DATABASE_URL"], autocommit=True) as admin:
+        admin.execute("""
+            INSERT INTO ingestion.attempts (dataset, entity_key, outcome, started_at, finished_at)
+            VALUES
+                ('events', 'recovered', 'failed', NOW() - INTERVAL '3 hours', NOW()),
+                ('events', 'recovered', 'complete', NOW(), NOW()),
+                ('official_games', 'failed', 'failed', NOW(), NOW()),
+                ('sync', 'partial', 'partial', NOW(), NOW()),
+                ('derived', 'stalled', 'running', NOW() - INTERVAL '3 hours', NULL),
+                ('events', 'active', 'running', NOW(), NULL),
+                ('shifts', 'missing', 'unavailable', NOW(), NOW());
+        """)
+    await database.open(Settings(DATABASE_URL=migrated_database))
+    try:
+        async with database.connection() as connection:
+            cursor = await connection.execute(load_query("dataset_health"))
+            row = await cursor.fetchone()
+            assert row["ingestion_failed"] == 1
+            assert row["ingestion_partial"] == 1
+            assert row["ingestion_stalled"] == 1
+            assert row["healthy"] is False
+        with psycopg.connect(os.environ["TEST_DATABASE_URL"], autocommit=True) as admin:
+            admin.execute("""
+                INSERT INTO ingestion.attempts (dataset, entity_key, outcome, finished_at)
+                VALUES ('official_games', 'failed', 'complete', NOW()),
+                       ('sync', 'partial', 'complete', NOW()),
+                       ('derived', 'stalled', 'complete', NOW());
+            """)
+        async with database.connection() as connection:
+            row = await (await connection.execute(load_query("dataset_health"))).fetchone()
+            assert (
+                row["ingestion_failed"] == row["ingestion_partial"] == row["ingestion_stalled"] == 0
+            )
+        app = FastAPI()
+        register_schema_errors(app)
+        app.include_router(health.router, prefix="/api/v1")
+        with psycopg.connect(os.environ["TEST_DATABASE_URL"], autocommit=True) as admin:
+            admin.execute(
+                "REVOKE SELECT ON observability.ingestion_freshness FROM studio_contract_reader"
+            )
+            try:
+                async with AsyncClient(
+                    transport=ASGITransport(app=app), base_url="http://test"
+                ) as client:
+                    response = await client.get("/api/v1/ready")
+                    assert response.status_code == 503
+                    assert "0034" in response.json()["detail"]
+            finally:
+                admin.execute(
+                    "GRANT SELECT ON observability.ingestion_freshness TO studio_contract_reader"
+                )
     finally:
         await database.close()

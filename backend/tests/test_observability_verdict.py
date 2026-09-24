@@ -1,5 +1,7 @@
 from datetime import UTC, date, datetime, timedelta
 
+import pytest
+
 from pucksstudio.hockey.observability import (
     GapCounts,
     assess,
@@ -164,3 +166,11 @@ def test_offseason_dates_are_not_stale() -> None:
     )
     # Sync is 28 days old, so only the sync reason appears, not a game-date one.
     assert codes(assessment) == ["sync_overdue"]
+
+
+@pytest.mark.parametrize("field", ["ingestion_failed", "ingestion_partial", "ingestion_stalled"])
+def test_ingestion_issue_overrides_complete_coverage_and_recent_sync(field) -> None:
+    assessment = assess(summary(**{field: 1}), {}, now=NOW, sync_overdue_hours=36)
+    assert assessment.verdict == "attention"
+    assert codes(assessment) == [field]
+    assert assessment.reasons[0].count == 1
